@@ -31,6 +31,7 @@ src/
 │   ├── appointment/
 │   ├── auth/
 │   ├── clinic/
+│   ├── dashboard/    # Analytics and overview statistics
 │   ├── doctor/
 │   ├── notification/
 │   ├── patient/
@@ -51,7 +52,11 @@ Multi-Role Authentication & Authorization: Supports Admins, Doctors, Receptionis
 
 Real-Time Queue Management: Live tracking of appointment queues powered by Socket.io and Redis cache layers.
 
+Clinic-Scoped Operations: Operations like queue management and appointment booking are now securely scoped to specific clinics.
+
 Multi-Clinic Associations: Doctors can manage schedules and availability across multiple clinics.
+
+Dashboard & Analytics: Dedicated module for platform overviews and statistics.
 
 Digital Prescriptions: Built-in PDF generator to instantly create and share medical prescriptions.
 
@@ -115,6 +120,12 @@ Admin
 /api/v1/admin
 
 Platform settings, overview stats, and system administration
+
+Dashboard
+
+/api/v1/dashboard
+
+Analytics and system overview statistics
 
 Doctor
 
