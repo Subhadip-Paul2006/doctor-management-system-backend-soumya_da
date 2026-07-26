@@ -15,13 +15,13 @@ export const initSocket = (httpServer, corsOrigin) => {
     logger.info(`🔌 Socket connected: ${socket.id}`);
 
     // Client joins a room specific to a doctor's queue to receive live updates
-    socket.on("joinQueue", (doctorId) => {
-      socket.join(`queue:${doctorId}`);
-      logger.info(`Socket ${socket.id} joined queue:${doctorId}`);
+    socket.on("joinQueue", ({ doctorId, clinicId }) => {
+      socket.join(`queue:${doctorId}:${clinicId}`);
+      logger.info(`Socket ${socket.id} joined queue:${doctorId}:${clinicId}`);
     });
 
-    socket.on("leaveQueue", (doctorId) => {
-      socket.leave(`queue:${doctorId}`);
+    socket.on("leaveQueue", ({ doctorId, clinicId }) => {
+      socket.leave(`queue:${doctorId}:${clinicId}`);
     });
 
     socket.on("disconnect", () => {

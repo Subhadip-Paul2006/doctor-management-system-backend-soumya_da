@@ -27,12 +27,13 @@ export const searchDoctors = async ({ doctorName, clinicName, clinicId, city, da
     },
   });
 
-  // If a date is given (e.g. "clinic + date" search), attach that day's queue snapshot
   if (date) {
     const doctorsWithQueue = await Promise.all(
       doctors.map(async (doctor) => {
         const queue = await prisma.queue.findUnique({
-          where: { doctorId_date: { doctorId: doctor.id, date: new Date(date) } },
+          where: {
+            doctorId_clinicId_date: { doctorId: doctor.id, clinicId: doctor.clinicId, date: new Date(date) },
+          },
         });
         return { ...doctor, todayQueue: queue || null };
       })
@@ -43,11 +44,24 @@ export const searchDoctors = async ({ doctorName, clinicName, clinicId, city, da
   return doctors;
 };
 
-export const findOrCreateQueue = (doctorId, date) => {
+// Returns every clinic a doctor can currently be booked at: their primary clinic
+// plus any clinic where they have an APPROVED association.
+export const getBookableClinicsForDoctor = async (doctorId) => {
+  const doctor = await prisma.doctor.findUnique({ where: { id: doctorId } });
+  if (!doctor) return [];
+
+  const approvedAssociations = await prisma.doctorClinicAssociation.findMany({
+    where: { doctorId, status: "APPROVED" },
+  });
+
+  return [doctor.clinicId, ...approvedAssociations.map((a) => a.clinicId)];
+};
+
+export const findOrCreateQueue = (doctorId, clinicId, date) => {
   return prisma.queue.upsert({
-    where: { doctorId_date: { doctorId, date: new Date(date) } },
+    where: { doctorId_clinicId_date: { doctorId, clinicId, date: new Date(date) } },
     update: {},
-    create: { doctorId, date: new Date(date) },
+    create: { doctorId, clinicId, date: new Date(date) },
   });
 };
 
@@ -59,10 +73,7 @@ export const getPatientById = (id) => {
   return prisma.patient.findUnique({ where: { id } });
 };
 
-// Atomically increments lastTokenIssued and creates the appointment with that token —
-// this transaction guarantees no two bookings can ever get the same token number,
-// even under concurrent requests.
-export const createAppointmentWithToken = ({ doctorId, patientId, queueId, date, bookingSource }) => {
+export const createAppointmentWithToken = ({ doctorId, clinicId, patientId, queueId, date, bookingSource }) => {
   return prisma.$transaction(async (tx) => {
     const queue = await tx.queue.update({
       where: { id: queueId },
@@ -72,6 +83,7 @@ export const createAppointmentWithToken = ({ doctorId, patientId, queueId, date,
     const appointment = await tx.appointment.create({
       data: {
         doctorId,
+        clinicId,
         patientId,
         queueId,
         date: new Date(date),
@@ -94,12 +106,12 @@ export const createWalkInPatient = ({ name, age, phone }) => {
   });
 };
 
-
 export const findAppointmentsForPatient = (patientId) => {
   return prisma.appointment.findMany({
     where: { patientId },
     include: {
-      doctor: { include: { user: { select: { name: true } }, clinic: { select: { clinicName: true } } } },
+      doctor: { include: { user: { select: { name: true } } } },
+      clinic: { select: { clinicName: true } },
       queue: true,
     },
     orderBy: { createdAt: "desc" },

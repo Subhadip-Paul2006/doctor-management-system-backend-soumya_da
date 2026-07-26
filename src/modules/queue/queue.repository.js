@@ -1,14 +1,14 @@
 import prisma from "../../config/db.config.js";
 
-export const findQueue = (doctorId, date) => {
+export const findQueue = (doctorId, clinicId, date) => {
   return prisma.queue.findUnique({
-    where: { doctorId_date: { doctorId, date: new Date(date) } },
+    where: { doctorId_clinicId_date: { doctorId, clinicId, date: new Date(date) } },
   });
 };
 
-export const findQueueWithAppointments = (doctorId, date) => {
+export const findQueueWithAppointments = (doctorId, clinicId, date) => {
   return prisma.queue.findUnique({
-    where: { doctorId_date: { doctorId, date: new Date(date) } },
+    where: { doctorId_clinicId_date: { doctorId, clinicId, date: new Date(date) } },
     include: {
       appointments: {
         orderBy: { token: "asc" },
@@ -36,9 +36,9 @@ export const setCurrentToken = (queueId, currentToken) => {
   return prisma.queue.update({ where: { id: queueId }, data: { currentToken } });
 };
 
-export const findAppointmentByToken = (doctorId, date, token) => {
+export const findAppointmentByToken = (doctorId, clinicId, date, token) => {
   return prisma.appointment.findUnique({
-    where: { doctorId_date_token: { doctorId, date: new Date(date), token } },
+    where: { doctorId_clinicId_date_token: { doctorId, clinicId, date: new Date(date), token } },
   });
 };
 
@@ -55,7 +55,7 @@ export const findReceptionistAssignment = (userId, doctorId) => {
   });
 };
 
-export const createEmergencyAppointment = (doctorId, queueId, date, patientId) => {
+export const createEmergencyAppointment = (doctorId, clinicId, queueId, date, patientId) => {
   return prisma.$transaction(async (tx) => {
     const queue = await tx.queue.update({
       where: { id: queueId },
@@ -65,6 +65,7 @@ export const createEmergencyAppointment = (doctorId, queueId, date, patientId) =
     const appointment = await tx.appointment.create({
       data: {
         doctorId,
+        clinicId,
         patientId,
         queueId,
         date: new Date(date),

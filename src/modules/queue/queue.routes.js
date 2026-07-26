@@ -7,15 +7,15 @@ const router = Router();
 
 router.use(authMiddleware, roleMiddleware("RECEPTIONIST", "CLINIC", "SUPER_ADMIN", "ADMIN"));
 
-router.get("/:doctorId/:date", queueController.getQueueStatus);
-router.patch("/:doctorId/:date/next", queueController.next);
-router.patch("/:doctorId/:date/previous", queueController.previous);
-router.patch("/:doctorId/:date/skip", queueController.skip);
-router.patch("/:doctorId/:date/recall", queueController.recall);
-router.patch("/:doctorId/:date/pause", queueController.pause);
-router.patch("/:doctorId/:date/resume", queueController.resume);
-router.patch("/:doctorId/:date/close", queueController.close);
-router.patch("/:doctorId/:date/reopen", queueController.reopen);
-router.post("/:doctorId/:date/emergency", queueController.emergency);
+router.get("/:doctorId/:clinicId/:date", queueController.getQueueStatus);
+router.patch("/:doctorId/:clinicId/:date/next", queueController.next);
+router.patch("/:doctorId/:clinicId/:date/previous", queueController.previous);
+router.patch("/:doctorId/:clinicId/:date/skip", queueController.skip);
+router.patch("/:doctorId/:clinicId/:date/recall", queueController.recall);
+router.patch("/:doctorId/:clinicId/:date/pause", queueController.pause);
+router.patch("/:doctorId/:clinicId/:date/resume", queueController.resume);
+router.patch("/:doctorId/:clinicId/:date/close", queueController.close);
+router.patch("/:doctorId/:clinicId/:date/reopen", queueController.reopen);
+router.post("/:doctorId/:clinicId/:date/emergency", queueController.emergency);
 
 export default router;

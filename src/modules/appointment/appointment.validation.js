@@ -5,23 +5,21 @@ export const searchDoctorsSchema = z.object({
   clinicName: z.string().optional(),
   clinicId: z.string().uuid().optional(),
   city: z.string().optional(),
-  date: z.string().optional(), // YYYY-MM-DD, used with clinicId to show who's sitting that day
+  date: z.string().optional(),
 });
 
 export const bookOnlineAppointmentSchema = z.object({
   doctorId: z.string().uuid(),
-  date: z.string(), // YYYY-MM-DD
+  clinicId: z.string().uuid(),
+  date: z.string(),
 });
 
 export const bookReceptionAppointmentSchema = z.object({
   doctorId: z.string().uuid(),
-  date: z.string(), // YYYY-MM-DD
+  clinicId: z.string().uuid(),
+  date: z.string(),
   bookingSource: z.enum(["RECEPTION", "WALK_IN", "PHONE"]).default("RECEPTION"),
-
-  // Existing patient path
   patientId: z.string().uuid().optional(),
-
-  // New offline/walk-in patient path (per your spec: just Name + Age, no full account)
   newPatient: z
     .object({
       name: z.string().min(2, "Name is required"),
