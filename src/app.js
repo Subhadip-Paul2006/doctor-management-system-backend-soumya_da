@@ -22,6 +22,8 @@ import queueRoutes from "./modules/queue/queue.routes.js";
 import announcementRoutes from "./modules/announcement/announcement.routes.js";
 import doctorRoutes from "./modules/doctor/doctor.routes.js";
 
+import dashboardRoutes from "./modules/dashboard/dashboard.routes.js";
+
 const app = express();
 
 app.use(helmet());
@@ -58,6 +60,8 @@ app.use("/api/v1/queue", queueRoutes);
 app.use("/api/v1/announcements", announcementRoutes);
 
 app.use("/api/v1/doctors", doctorRoutes);
+
+app.use("/api/v1/dashboard", dashboardRoutes);
 
 app.use(notFoundMiddleware);
 app.use(errorMiddleware);

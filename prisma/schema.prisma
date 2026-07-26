@@ -120,6 +120,8 @@ model Clinic {
   receptionists       Receptionist[]
   announcements       Announcement[]
   doctorAssociations  DoctorClinicAssociation[]
+  queues              Queue[]
+  appointments        Appointment[]
 
   @@map("clinics")
 }
@@ -210,6 +212,8 @@ model Queue {
   id              String      @id @default(uuid())
   doctor          Doctor      @relation(fields: [doctorId], references: [id], onDelete: Cascade)
   doctorId        String
+  clinic          Clinic      @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  clinicId        String
   date            DateTime    @db.Date
   currentToken    Int         @default(0)
   lastTokenIssued Int         @default(0)
@@ -221,7 +225,7 @@ model Queue {
   appointments Appointment[]
   logs         QueueLog[]
 
-  @@unique([doctorId, date])
+  @@unique([doctorId, clinicId, date])
   @@map("queues")
 }
 
@@ -242,6 +246,8 @@ model Appointment {
   id            String            @id @default(uuid())
   doctor        Doctor            @relation(fields: [doctorId], references: [id], onDelete: Cascade)
   doctorId      String
+  clinic        Clinic            @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  clinicId      String
   patient       Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
   patientId     String
   queue         Queue             @relation(fields: [queueId], references: [id], onDelete: Cascade)
@@ -255,7 +261,7 @@ model Appointment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([doctorId, date, token])
+  @@unique([doctorId, clinicId, date, token])
   @@map("appointments")
 }
 
