@@ -1,180 +1,216 @@
-MedConnect Backend (Doctor Management System)
+# 🏥 Doctor Management System - Backend
 
-A robust, enterprise-grade backend built for a modern multi-clinic Doctor Management and Real-Time Appointment Queue System. This backend supports secure role-based access, automated queue management, multi-clinic doctor associations, live announcements, and integrated digital prescription generation.
+A secure REST API backend for a Doctor Management System built with Node.js, Express.js, and MongoDB. It provides authentication, doctor management, appointment booking, and role-based access for Admins, Doctors, and Patients.
 
-🚀 Tech Stack
+---
 
-Runtime: Node.js
+## ✨ Features
 
-Framework: Express.js
+- JWT Authentication
+- Role-Based Authorization
+- Admin Dashboard APIs
+- Doctor Management
+- Patient Management
+- Appointment Booking
+- Appointment Approval/Rejection
+- Secure Password Hashing (bcrypt)
+- MongoDB Database
+- RESTful API
+- Error Handling
+- Input Validation
 
-Database & ORM: PostgreSQL with Prisma ORM
+---
 
-Caching & Real-time: Redis & Socket.io
+## 🛠 Tech Stack
 
-Authentication: JWT (JSON Web Tokens) & Passport.js
+- Node.js
+- Express.js
+- MongoDB
+- Mongoose
+- JWT
+- bcrypt
+- dotenv
+- CORS
+- Cookie Parser
 
-File Uploads: Cloudinary
+---
 
-PDF Generation: PDFKit
+## 📂 Project Structure
 
-📂 Project Architecture
+backend/
+│
+├── config/
+├── controllers/
+├── middleware/
+├── models/
+├── routes/
+├── utils/
+├── uploads/
+├── server.js
+└── package.json
 
-The project follows a clean, modular architecture separating controllers, services, repositories, routes, and validations for maximum maintainability:
+---
 
-src/
-├── config/         # Database, Redis, Socket, Passport, and Cloudinary setups
-├── middlewares/    # Authentication, role-control, rate-limiting, and error handling
-├── modules/        # Feature-based business logic domains
-│   ├── admin/
-│   ├── announcement/
-│   ├── appointment/
-│   ├── auth/
-│   ├── clinic/
-│   ├── dashboard/    # Analytics and overview statistics
-│   ├── doctor/
-│   ├── notification/
-│   ├── patient/
-│   ├── pharmacy/
-│   ├── prescription/
-│   ├── queue/
-│   ├── receptionist/
-│   └── user/
-├── sockets/        # Real-time WebSocket handlers (Queue, Announcements)
-├── utils/          # Helpers (API Error, API Response, PDF Generator, Cloudinary)
-├── app.js          # Express app configuration
-└── server.js       # Application entry point
+## 🚀 Installation
 
+### Clone Repository
 
-🔑 Core Features
-
-Multi-Role Authentication & Authorization: Supports Admins, Doctors, Receptionists, Patients (including Guest capabilities), and Pharmacy staff with strict permission controls.
-
-Real-Time Queue Management: Live tracking of appointment queues powered by Socket.io and Redis cache layers.
-
-Clinic-Scoped Operations: Operations like queue management and appointment booking are now securely scoped to specific clinics.
-
-Multi-Clinic Associations: Doctors can manage schedules and availability across multiple clinics.
-
-Dashboard & Analytics: Dedicated module for platform overviews and statistics.
-
-Digital Prescriptions: Built-in PDF generator to instantly create and share medical prescriptions.
-
-Live Announcements System: Broadcast updates and announcements to specific clinics or user groups in real time.
-
-File Upload Integration: Secure media and document management using Cloudinary.
-
-⚙️ Getting Started
-
-Prerequisites
-
-Node.js (v18+ recommended)
-
-PostgreSQL database instance
-
-Redis server (optional/recommended for queue caching)
-
-Installation
-
-Clone the repository
-
+```bash
 git clone https://github.com/soumya28022005/doctor-management-system-backend.git
+```
+
+```bash
 cd doctor-management-system-backend
+```
 
+### Install Packages
 
-Install dependencies
-
+```bash
 npm install
+```
 
+### Create .env
 
-Configure Environment Variables
-Create a .env file in the root directory and add your configurations (Database URL, JWT Secret, Cloudinary keys, Redis URL, etc.).
+```env
+PORT=5000
 
-Run Database Migrations & Seeding
+MONGO_URI=your_mongodb_uri
 
-npx prisma migrate dev
-npm run seed
+JWT_SECRET=your_secret
 
+JWT_EXPIRE=7d
 
-Start the Development Server
+CLIENT_URL=http://localhost:5173
+```
 
+---
+
+## ▶ Run Project
+
+Development
+
+```bash
 npm run dev
+```
 
+Production
 
-🛠️ API Modules & Endpoints
+```bash
+npm start
+```
 
-Module
+---
 
-Base Route
+## 🔐 Authentication
 
-Description
+JWT Authentication
 
-Auth
+Protected Routes
 
-/api/v1/auth
+Role Based Access
 
-User registration, login, token refresh, and logout
+- Admin
+- Doctor
+- Patient
 
-Admin
+---
 
-/api/v1/admin
+## 📌 API Endpoints
 
-Platform settings, overview stats, and system administration
+### Authentication
 
-Dashboard
+POST /api/auth/register
 
-/api/v1/dashboard
+POST /api/auth/login
 
-Analytics and system overview statistics
+POST /api/auth/logout
 
-Doctor
+---
 
-/api/v1/doctors
+### Doctor
 
-Doctor profiles, schedules, and multi-clinic mapping
+GET /api/doctors
 
-Patient
+GET /api/doctors/:id
 
-/api/v1/patients
+POST /api/doctors
 
-Patient profile management and medical history
+PUT /api/doctors/:id
 
-Appointment
+DELETE /api/doctors/:id
 
-/api/v1/appointments
+---
 
-Booking, rescheduling, and status management
+### Appointment
 
-Queue
+POST /api/appointments
 
-/api/v1/queue
+GET /api/appointments
 
-Live queue controls, logs, and token tracking
+PUT /api/appointments/:id
 
-Clinic
+DELETE /api/appointments/:id
 
-/api/v1/clinics
+---
 
-Clinic registration and association controls
+### Admin
 
-Prescription
+GET /api/admin/dashboard
 
-/api/v1/prescriptions
+GET /api/admin/users
 
-Digital prescription generation and retrieval
+GET /api/admin/doctors
 
-Pharmacy
+GET /api/admin/appointments
 
-/api/v1/pharmacy
+---
 
-Prescription fulfillment and medicine dispensing
+## 📸 API Testing
 
-Announcements
+Use
 
-/api/v1/announcements
+- Postman
+- Thunder Client
+- Insomnia
 
-Real-time broadcast creation and management
+---
 
-📄 License
+## 🌐 Environment Variables
 
-This project is licensed under the MIT License.
+| Variable | Description |
+|-----------|-------------|
+| PORT | Server Port |
+| MONGO_URI | MongoDB URI |
+| JWT_SECRET | JWT Secret |
+| JWT_EXPIRE | Token Expiry |
+| CLIENT_URL | Frontend URL |
+
+---
+
+## 🧪 Future Improvements
+
+- Email Notifications
+- Video Consultation
+- Prescription Module
+- Payment Gateway
+- Medical Reports Upload
+- Docker Support
+- Swagger Documentation
+
+---
+
+## 👨‍💻 Author
+
+Soumya Chatterjee
+
+GitHub:
+https://github.com/soumya28022005
+
+LinkedIn:
+(Add your LinkedIn)
+
+---
+
+## 📄 License
+
+MIT License
