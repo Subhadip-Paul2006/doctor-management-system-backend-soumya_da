@@ -115,6 +115,7 @@ model Clinic {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  onlineConsultationEnabled Boolean @default(true)
 
   doctors             Doctor[]
   receptionists       Receptionist[]
@@ -122,6 +123,8 @@ model Clinic {
   doctorAssociations  DoctorClinicAssociation[]
   queues              Queue[]
   appointments        Appointment[]
+  workingHours ClinicWorkingHours[]
+  holidays     ClinicHoliday[]
 
   @@map("clinics")
 }
@@ -330,4 +333,31 @@ model DoctorClinicAssociation {
   @@map("doctor_clinic_associations")
 }
 
+model ClinicWorkingHours {
+  id       String    @id @default(uuid())
+  clinic   Clinic    @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  clinicId String
+  dayOfWeek DayOfWeek
+  openTime  String? // "HH:mm" — null if closed that day
+  closeTime String? // "HH:mm"
+  isClosed  Boolean @default(false)
 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([clinicId, dayOfWeek])
+  @@map("clinic_working_hours")
+}
+
+model ClinicHoliday {
+  id       String   @id @default(uuid())
+  clinic   Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  clinicId String
+  date     DateTime @db.Date
+  reason   String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([clinicId, date])
+  @@map("clinic_holidays")
+}

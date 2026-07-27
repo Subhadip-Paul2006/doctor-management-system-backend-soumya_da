@@ -18,6 +18,15 @@ import {
   updateDoctor,
   searchClinicsByName,
   updateClinicLogo,
+  upsertWorkingHours,
+  findWorkingHours,
+  findWorkingHoursForDay,
+  addHoliday,
+  removeHoliday,
+  findHolidays,
+  findHolidayForDate,
+  setOnlineConsultationEnabled,
+  getClinicById, getWorkingHoursForClinicDay, getHolidayForClinicDate
 } from "./clinic.repository.js";
 
 export const getMyClinicProfile = async (userId) => {
@@ -160,4 +169,49 @@ export const uploadLogo = async (clinicUserId, fileBuffer) => {
 
   const result = await uploadBufferToCloudinary(fileBuffer, "jeet/clinics");
   return updateClinicLogo(clinic.id, result.secure_url);
+};
+
+// holidays
+
+export const setWorkingHours = async (clinicUserId, workingHours) => {
+  const clinic = await findClinicByUserId(clinicUserId);
+  if (!clinic) throw new ApiError(404, "Clinic profile not found");
+  return upsertWorkingHours(clinic.id, workingHours);
+};
+
+export const getWorkingHours = async (clinicUserId) => {
+  const clinic = await findClinicByUserId(clinicUserId);
+  if (!clinic) throw new ApiError(404, "Clinic profile not found");
+  return findWorkingHours(clinic.id);
+};
+
+export const addClinicHoliday = async (clinicUserId, { date, reason }) => {
+  const clinic = await findClinicByUserId(clinicUserId);
+  if (!clinic) throw new ApiError(404, "Clinic profile not found");
+
+  const existing = await findHolidayForDate(clinic.id, date);
+  if (existing) throw new ApiError(409, "A holiday is already set for this date");
+
+  return addHoliday(clinic.id, date, reason);
+};
+
+export const removeClinicHoliday = async (clinicUserId, holidayId) => {
+  const clinic = await findClinicByUserId(clinicUserId);
+  if (!clinic) throw new ApiError(404, "Clinic profile not found");
+
+  const result = await removeHoliday(clinic.id, holidayId);
+  if (result.count === 0) throw new ApiError(404, "Holiday not found");
+  return { deleted: true };
+};
+
+export const listClinicHolidays = async (clinicUserId) => {
+  const clinic = await findClinicByUserId(clinicUserId);
+  if (!clinic) throw new ApiError(404, "Clinic profile not found");
+  return findHolidays(clinic.id);
+};
+
+export const toggleOnlineConsultation = async (clinicUserId, enabled) => {
+  const clinic = await findClinicByUserId(clinicUserId);
+  if (!clinic) throw new ApiError(404, "Clinic profile not found");
+  return setOnlineConsultationEnabled(clinic.id, enabled);
 };

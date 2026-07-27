@@ -55,3 +55,35 @@ export const changeStaffPasswordSchema = z.object({
 export const searchClinicsByNameSchema = z.object({
   name: z.string().min(1, "Name is required"),
 });
+
+// holidays 
+
+export const setWorkingHoursSchema = z.object({
+  workingHours: z
+    .array(
+      z.object({
+        dayOfWeek: z.enum([
+          "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY",
+        ]),
+        isClosed: z.boolean().default(false),
+        openTime: z
+          .string()
+          .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "openTime must be HH:mm")
+          .optional(),
+        closeTime: z
+          .string()
+          .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "closeTime must be HH:mm")
+          .optional(),
+      })
+    )
+    .min(1, "At least one day must be provided"),
+});
+
+export const addHolidaySchema = z.object({
+  date: z.string(), // YYYY-MM-DD
+  reason: z.string().optional(),
+});
+
+export const toggleOnlineConsultationSchema = z.object({
+  enabled: z.boolean(),
+});

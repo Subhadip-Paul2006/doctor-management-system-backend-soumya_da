@@ -10,6 +10,9 @@ import {
   createWalkInPatient,
   findAppointmentsForPatient,
   getQueueModeForDoctorClinic,
+  getClinicById,
+  getWorkingHoursForClinicDay,
+  getHolidayForClinicDate,
 } from "./appointment.repository.js";
 import { emitQueueUpdate } from "../../sockets/queue.socket.js";
 
@@ -26,6 +29,7 @@ export const bookOnlineAppointment = async (patientUserId, { doctorId, clinicId,
   if (!patient) throw new ApiError(404, "Patient profile not found");
 
   await assertBookableClinic(doctorId, clinicId);
+  await assertClinicOperational(clinicId, date, { isOnlineBooking: true });
   await validateBookingWindow(doctorId, clinicId);
 
   return bookAppointmentCore({
@@ -46,6 +50,7 @@ export const bookReceptionAppointment = async ({
   bookingSource,
 }) => {
   await assertBookableClinic(doctorId, clinicId);
+  await assertClinicOperational(clinicId, date, { isOnlineBooking: false });
 
   let finalPatientId = patientId;
 
@@ -171,4 +176,26 @@ const validateBookingWindow = async (doctorId, clinicId) => {
 
 const formatTime = (date) => {
   return date.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
+};
+
+const DAY_NAMES = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
+
+const assertClinicOperational = async (clinicId, date, { isOnlineBooking }) => {
+  const clinic = await getClinicById(clinicId);
+  if (!clinic) throw new ApiError(404, "Clinic not found");
+
+  if (isOnlineBooking && !clinic.onlineConsultationEnabled) {
+    throw new ApiError(400, "This clinic does not accept online bookings — please book in person or by phone");
+  }
+
+  const holiday = await getHolidayForClinicDate(clinicId, date);
+  if (holiday) {
+    throw new ApiError(400, `Clinic is closed on this date${holiday.reason ? `: ${holiday.reason}` : ""}`);
+  }
+
+  const dayOfWeek = DAY_NAMES[new Date(date).getDay()];
+  const hours = await getWorkingHoursForClinicDay(clinicId, dayOfWeek);
+  if (hours?.isClosed) {
+    throw new ApiError(400, `Clinic is closed on ${dayOfWeek.toLowerCase()}s`);
+  }
 };

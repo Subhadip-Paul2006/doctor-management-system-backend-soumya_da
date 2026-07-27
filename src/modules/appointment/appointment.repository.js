@@ -140,3 +140,18 @@ export const getQueueModeForDoctorClinic = async (doctorId, clinicId) => {
 
   return association?.queueMode || "LIVE";
 };
+export const getClinicById = (id) => {
+  return prisma.clinic.findUnique({ where: { id } });
+};
+
+export const getWorkingHoursForClinicDay = (clinicId, dayOfWeek) => {
+  return prisma.clinicWorkingHours.findUnique({
+    where: { clinicId_dayOfWeek: { clinicId, dayOfWeek } },
+  });
+};
+
+export const getHolidayForClinicDate = (clinicId, date) => {
+  return prisma.clinicHoliday.findUnique({
+    where: { clinicId_date: { clinicId, date: new Date(date) } },
+  });
+};

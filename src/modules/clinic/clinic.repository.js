@@ -138,3 +138,76 @@ export const searchClinicsByName = (name) => {
 export const updateClinicLogo = (clinicId, logo) => {
   return prisma.clinic.update({ where: { id: clinicId }, data: { logo } });
 };
+
+// holidays work
+
+export const upsertWorkingHours = (clinicId, workingHours) => {
+  return prisma.$transaction(
+    workingHours.map((wh) =>
+      prisma.clinicWorkingHours.upsert({
+        where: { clinicId_dayOfWeek: { clinicId, dayOfWeek: wh.dayOfWeek } },
+        update: { openTime: wh.openTime, closeTime: wh.closeTime, isClosed: wh.isClosed },
+        create: { clinicId, ...wh },
+      })
+    )
+  );
+};
+
+export const findWorkingHours = (clinicId) => {
+  return prisma.clinicWorkingHours.findMany({
+    where: { clinicId },
+    orderBy: { dayOfWeek: "asc" },
+  });
+};
+
+export const findWorkingHoursForDay = (clinicId, dayOfWeek) => {
+  return prisma.clinicWorkingHours.findUnique({
+    where: { clinicId_dayOfWeek: { clinicId, dayOfWeek } },
+  });
+};
+
+export const addHoliday = (clinicId, date, reason) => {
+  return prisma.clinicHoliday.create({
+    data: { clinicId, date: new Date(date), reason },
+  });
+};
+
+export const removeHoliday = (clinicId, holidayId) => {
+  return prisma.clinicHoliday.deleteMany({ where: { id: holidayId, clinicId } });
+};
+
+export const findHolidays = (clinicId) => {
+  return prisma.clinicHoliday.findMany({
+    where: { clinicId },
+    orderBy: { date: "asc" },
+  });
+};
+
+export const findHolidayForDate = (clinicId, date) => {
+  return prisma.clinicHoliday.findUnique({
+    where: { clinicId_date: { clinicId, date: new Date(date) } },
+  });
+};
+
+export const setOnlineConsultationEnabled = (clinicId, enabled) => {
+  return prisma.clinic.update({
+    where: { id: clinicId },
+    data: { onlineConsultationEnabled: enabled },
+  });
+};
+
+export const getClinicById = (id) => {
+  return prisma.clinic.findUnique({ where: { id } });
+};
+
+export const getWorkingHoursForClinicDay = (clinicId, dayOfWeek) => {
+  return prisma.clinicWorkingHours.findUnique({
+    where: { clinicId_dayOfWeek: { clinicId, dayOfWeek } },
+  });
+};
+
+export const getHolidayForClinicDate = (clinicId, date) => {
+  return prisma.clinicHoliday.findUnique({
+    where: { clinicId_date: { clinicId, date: new Date(date) } },
+  });
+};

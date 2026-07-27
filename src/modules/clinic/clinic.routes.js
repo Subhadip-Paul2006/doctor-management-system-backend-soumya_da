@@ -25,4 +25,13 @@ router.patch("/requests/:associationId/respond", clinicController.respondToDocto
 
 router.post("/logo", upload.single("photo"), clinicController.uploadLogo);
 
+router.post("/working-hours", clinicController.setWorkingHours);
+router.get("/working-hours", clinicController.getWorkingHours);
+
+router.post("/holidays", clinicController.addHoliday);
+router.delete("/holidays/:holidayId", clinicController.removeHoliday);
+router.get("/holidays", clinicController.listHolidays);
+
+router.patch("/online-consultation", clinicController.toggleOnlineConsultation);
+
 export default router;

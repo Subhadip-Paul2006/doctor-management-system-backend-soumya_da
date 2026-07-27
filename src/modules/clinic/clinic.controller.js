@@ -10,6 +10,9 @@ import {
   changeStaffPasswordSchema,
   updateDoctorSchema,
   searchClinicsByNameSchema,
+  setWorkingHoursSchema,
+  addHolidaySchema,
+  toggleOnlineConsultationSchema,
 } from "./clinic.validation.js";
 import { respondToRequestSchema } from "../doctor/doctor.validation.js";
 
@@ -93,4 +96,41 @@ export const uploadLogo = asyncHandler(async (req, res) => {
   if (!req.file) throw new ApiError(400, "No image file provided");
   const clinic = await clinicService.uploadLogo(req.user.id, req.file.buffer);
   res.status(200).json(new ApiResponse(true, "Logo uploaded", { clinic }));
+});
+
+// holiday and work
+
+export const setWorkingHours = asyncHandler(async (req, res) => {
+  const { workingHours } = setWorkingHoursSchema.parse(req.body);
+  const result = await clinicService.setWorkingHours(req.user.id, workingHours);
+  res.status(200).json(new ApiResponse(true, "Working hours updated", { workingHours: result }));
+});
+
+export const getWorkingHours = asyncHandler(async (req, res) => {
+  const workingHours = await clinicService.getWorkingHours(req.user.id);
+  res.status(200).json(new ApiResponse(true, "Working hours fetched", { workingHours }));
+});
+
+export const addHoliday = asyncHandler(async (req, res) => {
+  const data = addHolidaySchema.parse(req.body);
+  const holiday = await clinicService.addClinicHoliday(req.user.id, data);
+  res.status(201).json(new ApiResponse(true, "Holiday added", { holiday }));
+});
+
+export const removeHoliday = asyncHandler(async (req, res) => {
+  await clinicService.removeClinicHoliday(req.user.id, req.params.holidayId);
+  res.status(200).json(new ApiResponse(true, "Holiday removed"));
+});
+
+export const listHolidays = asyncHandler(async (req, res) => {
+  const holidays = await clinicService.listClinicHolidays(req.user.id);
+  res.status(200).json(new ApiResponse(true, "Holidays fetched", { holidays }));
+});
+
+export const toggleOnlineConsultation = asyncHandler(async (req, res) => {
+  const { enabled } = toggleOnlineConsultationSchema.parse(req.body);
+  const clinic = await clinicService.toggleOnlineConsultation(req.user.id, enabled);
+  res
+    .status(200)
+    .json(new ApiResponse(true, `Online consultation ${enabled ? "enabled" : "disabled"}`, { clinic }));
 });
