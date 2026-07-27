@@ -32,6 +32,7 @@ export const updateDoctorSchema = z.object({
   qualification: z.string().optional(),
   experience: z.number().int().nonnegative().optional(),
   fee: z.number().nonnegative().optional(),
+  queueMode: z.enum(["LIVE", "PRIVATE", "TIME_SLOT"]).optional(),
 });
 
 export const createReceptionistSchema = z.object({

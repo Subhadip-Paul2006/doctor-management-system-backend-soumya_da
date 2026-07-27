@@ -124,3 +124,19 @@ export const findAppointmentById = (id) => {
     include: { queue: true, doctor: true, patient: { include: { user: true } } },
   });
 };
+
+// stop queeue system if not need
+export const getQueueModeForDoctorClinic = async (doctorId, clinicId) => {
+  const doctor = await prisma.doctor.findUnique({ where: { id: doctorId } });
+  if (!doctor) return "LIVE";
+
+  if (doctor.clinicId === clinicId) {
+    return doctor.queueMode;
+  }
+
+  const association = await prisma.doctorClinicAssociation.findFirst({
+    where: { doctorId, clinicId, status: "APPROVED" },
+  });
+
+  return association?.queueMode || "LIVE";
+};

@@ -9,6 +9,7 @@ import {
   createAppointmentWithToken,
   createWalkInPatient,
   findAppointmentsForPatient,
+  getQueueModeForDoctorClinic,
 } from "./appointment.repository.js";
 import { emitQueueUpdate } from "../../sockets/queue.socket.js";
 
@@ -68,7 +69,29 @@ export const bookReceptionAppointment = async ({
 export const getMyAppointments = async (patientUserId) => {
   const patient = await getPatientByUserId(patientUserId);
   if (!patient) throw new ApiError(404, "Patient profile not found");
-  return findAppointmentsForPatient(patient.id);
+
+  const appointments = await findAppointmentsForPatient(patient.id);
+
+  const appointmentsWithVisibility = await Promise.all(
+    appointments.map(async (appt) => {
+      const queueMode = await getQueueModeForDoctorClinic(appt.doctorId, appt.clinicId);
+
+      if (queueMode === "PRIVATE") {
+        return {
+          ...appt,
+          queue: {
+            status: appt.queue.status,
+            // currentToken and lastTokenIssued intentionally omitted in PRIVATE mode
+          },
+          queueMode: "PRIVATE",
+        };
+      }
+
+      return { ...appt, queueMode: "LIVE" };
+    })
+  );
+
+  return appointmentsWithVisibility;
 };
 
 // Ensures the requested clinicId is actually one this doctor can be booked at
@@ -99,14 +122,20 @@ const bookAppointmentCore = async ({ doctorId, clinicId, patientId, date, bookin
     bookingSource,
   });
 
-    emitQueueUpdate(doctorId, clinicId, {
-    doctorId,
-    clinicId,
-    date,
-    currentToken: updatedQueue.currentToken,
-    lastTokenIssued: updatedQueue.lastTokenIssued,
-    status: updatedQueue.status,
-  });
+    const queueMode = await getQueueModeForDoctorClinic(doctorId, clinicId);
+  const broadcastPayload =
+    queueMode === "PRIVATE"
+      ? { doctorId, clinicId, date, status: updatedQueue.status }
+      : {
+          doctorId,
+          clinicId,
+          date,
+          currentToken: updatedQueue.currentToken,
+          lastTokenIssued: updatedQueue.lastTokenIssued,
+          status: updatedQueue.status,
+        };
+
+  emitQueueUpdate(doctorId, clinicId, broadcastPayload);
 
   return appointment;
 };
