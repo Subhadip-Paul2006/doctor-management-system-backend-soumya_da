@@ -9,6 +9,24 @@ import {
 } from "./auth.validation.js";
 import * as authService from "./auth.service.js";
 
+import { generateAccessToken, generateRefreshToken } from "../../utils/tokenGenerator.js";
+import { updateRefreshToken } from "./auth.repository.js";
+
+
+export const googleCallback = asyncHandler(async (req, res) => {
+  const user = req.user; // set by Passport's GoogleStrategy done() callback
+
+  const payload = { id: user.id, role: user.role, email: user.email };
+  const accessToken = generateAccessToken(payload);
+  const refreshToken = generateRefreshToken(payload);
+
+  await updateRefreshToken(user.id, refreshToken);
+
+  res.cookie("refreshToken", refreshToken, COOKIE_OPTIONS);
+
+  res.redirect(`${process.env.CLIENT_URL}/oauth-success?accessToken=${accessToken}`);
+});
+
 export const register = asyncHandler(async (req, res) => {
   const data = registerSchema.parse(req.body);
   const user = await authService.registerUser(data);

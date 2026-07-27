@@ -24,6 +24,8 @@ import doctorRoutes from "./modules/doctor/doctor.routes.js";
 
 import dashboardRoutes from "./modules/dashboard/dashboard.routes.js";
 
+import passport from "./config/passport.config.js"; // google auth
+
 const app = express();
 
 app.use(helmet());
@@ -35,6 +37,7 @@ app.use(
 );
 app.use(compression());
 app.use(cookieParser());
+app.use(passport.initialize());  // this make for google with passport
 app.use(generalLimiter);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
