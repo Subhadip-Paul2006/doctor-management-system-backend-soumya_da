@@ -11,16 +11,17 @@ import * as authService from "./auth.service.js";
 
 import { generateAccessToken, generateRefreshToken } from "../../utils/tokenGenerator.js";
 import { updateRefreshToken } from "./auth.repository.js";
+import { hashToken } from "./auth.helper.js";
 
 
 export const googleCallback = asyncHandler(async (req, res) => {
-  const user = req.user; // set by Passport's GoogleStrategy done() callback
+  const user = req.user;
 
   const payload = { id: user.id, role: user.role, email: user.email };
   const accessToken = generateAccessToken(payload);
   const refreshToken = generateRefreshToken(payload);
 
-  await updateRefreshToken(user.id, refreshToken);
+  await updateRefreshToken(user.id, hashToken(refreshToken));
 
   res.cookie("refreshToken", refreshToken, COOKIE_OPTIONS);
 

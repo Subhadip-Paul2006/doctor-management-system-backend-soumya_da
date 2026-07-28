@@ -8,7 +8,7 @@ import {
   updateRefreshToken,
   clearRefreshToken,
 } from "./auth.repository.js";
-import { hashPassword, comparePassword, generateOtp } from "./auth.helper.js";
+import { hashPassword, comparePassword, generateOtp, hashToken } from "./auth.helper.js";
 import {
   generateAccessToken,
   generateRefreshToken,
@@ -66,7 +66,7 @@ export const refreshTokens = async (incomingRefreshToken) => {
   }
 
   const user = await findUserById(decoded.id);
-  if (!user || user.refreshToken !== incomingRefreshToken) {
+  if (!user || user.refreshToken !== hashToken(incomingRefreshToken)) {
     throw new ApiError(401, "Refresh token is invalid or has been revoked");
   }
 
@@ -126,7 +126,7 @@ const issueTokens = async (user) => {
   const accessToken = generateAccessToken(payload);
   const refreshToken = generateRefreshToken(payload);
 
-  await updateRefreshToken(user.id, refreshToken);
+  await updateRefreshToken(user.id, hashToken(refreshToken));
 
   return { accessToken, refreshToken };
 };
