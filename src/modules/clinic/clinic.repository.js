@@ -69,22 +69,22 @@ export const findReceptionistById = (id) => {
   return prisma.receptionist.findUnique({ where: { id } });
 };
 
-export const assignDoctorsToReceptionist = (receptionistId, doctorIds) => {
+export const assignDoctorsToReceptionist = (receptionistId, clinicId, doctorIds) => {
   return prisma.$transaction(async (tx) => {
     await tx.receptionistDoctor.deleteMany({
-      where: { receptionistId, doctorId: { notIn: doctorIds } },
+      where: { receptionistId, clinicId, doctorId: { notIn: doctorIds } },
     });
 
     for (const doctorId of doctorIds) {
       await tx.receptionistDoctor.upsert({
-        where: { receptionistId_doctorId: { receptionistId, doctorId } },
+        where: { receptionistId_doctorId_clinicId: { receptionistId, doctorId, clinicId } },
         update: {},
-        create: { receptionistId, doctorId },
+        create: { receptionistId, doctorId, clinicId },
       });
     }
 
     return tx.receptionistDoctor.findMany({
-      where: { receptionistId },
+      where: { receptionistId, clinicId },
       include: { doctor: { include: { user: { select: { name: true } } } } },
     });
   });
@@ -99,6 +99,7 @@ export const findAssignedDoctorsForReceptionistUser = (userId) => {
           doctor: {
             include: { user: { select: { id: true, name: true, email: true } } },
           },
+          clinic: { select: { id: true, clinicName: true } },
         },
       },
     },

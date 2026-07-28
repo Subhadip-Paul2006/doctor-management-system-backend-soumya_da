@@ -46,11 +46,11 @@ export const updateAppointmentStatus = (id, status) => {
   return prisma.appointment.update({ where: { id }, data: { status } });
 };
 
-export const findReceptionistAssignment = (userId, doctorId) => {
+export const findReceptionistAssignment = (userId, doctorId, clinicId) => {
   return prisma.receptionist.findFirst({
     where: {
       userId,
-      assignedDoctors: { some: { doctorId } },
+      assignedDoctors: { some: { doctorId, clinicId } },
     },
   });
 };

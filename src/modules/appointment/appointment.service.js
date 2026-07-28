@@ -1,5 +1,7 @@
 import ApiError from "../../utils/apiError.js";
 import prisma from "../../config/db.config.js";
+import { findClinicByUserId } from "../clinic/clinic.repository.js";
+import { findReceptionistAssignment } from "../queue/queue.repository.js";
 import {
   searchDoctors,
   getBookableClinicsForDoctor,
@@ -15,6 +17,8 @@ import {
   getHolidayForClinicDate,
 } from "./appointment.repository.js";
 import { emitQueueUpdate } from "../../sockets/queue.socket.js";
+
+const DAY_NAMES = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
 
 const getPatientByUserId = (userId) => {
   return prisma.patient.findUnique({ where: { userId } });
@@ -41,14 +45,11 @@ export const bookOnlineAppointment = async (patientUserId, { doctorId, clinicId,
   });
 };
 
-export const bookReceptionAppointment = async ({
-  doctorId,
-  clinicId,
-  date,
-  patientId,
-  newPatient,
-  bookingSource,
-}) => {
+export const bookReceptionAppointment = async (
+  user,
+  { doctorId, clinicId, date, patientId, newPatient, bookingSource }
+) => {
+  await assertReceptionBookingAccess(user, clinicId, doctorId);
   await assertBookableClinic(doctorId, clinicId);
   await assertClinicOperational(clinicId, date, { isOnlineBooking: false });
 
@@ -99,12 +100,56 @@ export const getMyAppointments = async (patientUserId) => {
   return appointmentsWithVisibility;
 };
 
+// Ensures the calling Receptionist/Clinic actually has the right to book
+// against this specific doctorId + clinicId pair.
+const assertReceptionBookingAccess = async (user, clinicId, doctorId) => {
+  if (user.role === "SUPER_ADMIN" || user.role === "ADMIN") return;
+
+  if (user.role === "CLINIC") {
+    const clinic = await findClinicByUserId(user.id);
+    if (!clinic || clinic.id !== clinicId) {
+      throw new ApiError(403, "You can only book appointments for your own clinic");
+    }
+    return;
+  }
+
+  if (user.role === "RECEPTIONIST") {
+    const assignment = await findReceptionistAssignment(user.id, doctorId, clinicId);
+    if (!assignment) {
+      throw new ApiError(403, "You are not assigned to book appointments for this doctor at this clinic");
+    }
+    return;
+  }
+
+  throw new ApiError(403, "You do not have permission to book this appointment");
+};
+
 // Ensures the requested clinicId is actually one this doctor can be booked at
 // (their primary clinic, or an APPROVED secondary association)
 const assertBookableClinic = async (doctorId, clinicId) => {
   const bookableClinicIds = await getBookableClinicsForDoctor(doctorId);
   if (!bookableClinicIds.includes(clinicId)) {
     throw new ApiError(400, "This doctor is not currently bookable at the specified clinic");
+  }
+};
+
+const assertClinicOperational = async (clinicId, date, { isOnlineBooking }) => {
+  const clinic = await getClinicById(clinicId);
+  if (!clinic) throw new ApiError(404, "Clinic not found");
+
+  if (isOnlineBooking && !clinic.onlineConsultationEnabled) {
+    throw new ApiError(400, "This clinic does not accept online bookings — please book in person or by phone");
+  }
+
+  const holiday = await getHolidayForClinicDate(clinicId, date);
+  if (holiday) {
+    throw new ApiError(400, `Clinic is closed on this date${holiday.reason ? `: ${holiday.reason}` : ""}`);
+  }
+
+  const dayOfWeek = DAY_NAMES[new Date(date).getDay()];
+  const hours = await getWorkingHoursForClinicDay(clinicId, dayOfWeek);
+  if (hours?.isClosed) {
+    throw new ApiError(400, `Clinic is closed on ${dayOfWeek.toLowerCase()}s`);
   }
 };
 
@@ -127,7 +172,7 @@ const bookAppointmentCore = async ({ doctorId, clinicId, patientId, date, bookin
     bookingSource,
   });
 
-    const queueMode = await getQueueModeForDoctorClinic(doctorId, clinicId);
+  const queueMode = await getQueueModeForDoctorClinic(doctorId, clinicId);
   const broadcastPayload =
     queueMode === "PRIVATE"
       ? { doctorId, clinicId, date, status: updatedQueue.status }
@@ -145,13 +190,13 @@ const bookAppointmentCore = async ({ doctorId, clinicId, patientId, date, bookin
   return appointment;
 };
 
+// Booking-window rule (startTime) is currently only defined on the doctor's
+// primary clinic record; secondary clinic associations don't yet carry their
+// own startTime restriction — only their dayOfWeek/startTime/endTime schedule window.
 const validateBookingWindow = async (doctorId, clinicId) => {
   const doctor = await getDoctorById(doctorId);
   if (!doctor) throw new ApiError(404, "Doctor not found");
 
-  // Booking-window rule (startTime) is currently only defined on the doctor's
-  // primary clinic record; secondary clinic associations don't yet carry their
-  // own startTime restriction — only their dayOfWeek/startTime/endTime schedule window.
   if (clinicId !== doctor.clinicId || !doctor.startTime) return;
 
   const settings = await prisma.platformSetting.findFirst();
@@ -176,26 +221,4 @@ const validateBookingWindow = async (doctorId, clinicId) => {
 
 const formatTime = (date) => {
   return date.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
-};
-
-const DAY_NAMES = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
-
-const assertClinicOperational = async (clinicId, date, { isOnlineBooking }) => {
-  const clinic = await getClinicById(clinicId);
-  if (!clinic) throw new ApiError(404, "Clinic not found");
-
-  if (isOnlineBooking && !clinic.onlineConsultationEnabled) {
-    throw new ApiError(400, "This clinic does not accept online bookings — please book in person or by phone");
-  }
-
-  const holiday = await getHolidayForClinicDate(clinicId, date);
-  if (holiday) {
-    throw new ApiError(400, `Clinic is closed on this date${holiday.reason ? `: ${holiday.reason}` : ""}`);
-  }
-
-  const dayOfWeek = DAY_NAMES[new Date(date).getDay()];
-  const hours = await getWorkingHoursForClinicDay(clinicId, dayOfWeek);
-  if (hours?.isClosed) {
-    throw new ApiError(400, `Clinic is closed on ${dayOfWeek.toLowerCase()}s`);
-  }
 };

@@ -125,6 +125,7 @@ model Clinic {
   appointments        Appointment[]
   workingHours ClinicWorkingHours[]
   holidays     ClinicHoliday[]
+  receptionistDoctors ReceptionistDoctor[]
 
   @@map("clinics")
 }
@@ -177,10 +178,12 @@ model ReceptionistDoctor {
   receptionistId String
   doctor         Doctor       @relation(fields: [doctorId], references: [id], onDelete: Cascade)
   doctorId       String
+  clinic         Clinic       @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  clinicId       String
 
   createdAt DateTime @default(now())
 
-  @@unique([receptionistId, doctorId])
+  @@unique([receptionistId, doctorId, clinicId])
   @@map("receptionist_doctors")
 }
 

@@ -28,6 +28,7 @@ import {
   setOnlineConsultationEnabled,
   getClinicById, getWorkingHoursForClinicDay, getHolidayForClinicDate
 } from "./clinic.repository.js";
+import { findApprovedAssociationsForDoctor } from "../doctor/doctor.repository.js";
 
 export const getMyClinicProfile = async (userId) => {
   const clinic = await findClinicByUserId(userId);
@@ -123,12 +124,23 @@ export const assignDoctorsToReceptionistForClinic = async (
 
   for (const doctorId of doctorIds) {
     const doctor = await findDoctorById(doctorId);
-    if (!doctor || doctor.clinicId !== clinic.id) {
-      throw new ApiError(400, `Doctor ${doctorId} does not belong to your clinic`);
+    if (!doctor) {
+      throw new ApiError(404, `Doctor ${doctorId} not found`);
+    }
+
+    const isPrimaryClinic = doctor.clinicId === clinic.id;
+
+    if (!isPrimaryClinic) {
+      const approvedAssociations = await findApprovedAssociationsForDoctor(doctorId);
+      const hasApprovedAssociation = approvedAssociations.some((a) => a.clinicId === clinic.id);
+
+      if (!hasApprovedAssociation) {
+        throw new ApiError(400, `Doctor ${doctorId} does not belong to your clinic`);
+      }
     }
   }
 
-  return assignDoctorsToReceptionist(receptionistId, doctorIds);
+  return assignDoctorsToReceptionist(receptionistId, clinic.id, doctorIds);
 };
 
 export const getMyAssignedDoctors = async (receptionistUserId) => {
@@ -139,6 +151,8 @@ export const getMyAssignedDoctors = async (receptionistUserId) => {
     doctorId: rd.doctor.id,
     name: rd.doctor.user.name,
     specialization: rd.doctor.specialization,
+    clinicId: rd.clinic.id,
+    clinicName: rd.clinic.clinicName,
   }));
 };
 

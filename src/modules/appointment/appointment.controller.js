@@ -21,7 +21,7 @@ export const bookOnline = asyncHandler(async (req, res) => {
 
 export const bookReception = asyncHandler(async (req, res) => {
   const data = bookReceptionAppointmentSchema.parse(req.body);
-  const appointment = await appointmentService.bookReceptionAppointment(data);
+  const appointment = await appointmentService.bookReceptionAppointment(req.user, data);
   res.status(201).json(new ApiResponse(true, "Appointment booked successfully", { appointment }));
 });
 

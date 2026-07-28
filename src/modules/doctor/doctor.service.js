@@ -1,4 +1,6 @@
 import ApiError from "../../utils/apiError.js";
+import prisma from "../../config/db.config.js";
+import { Prisma } from "@prisma/client";
 import { findClinicByUserId, findClinicById } from "../clinic/clinic.repository.js";
 import {
   searchDoctorsByName,
@@ -68,16 +70,7 @@ export const respondToClinicRequest = async (doctorUserId, associationId, action
     return updateAssociationStatus(associationId, "REJECTED");
   }
 
-  const existingApproved = await findApprovedAssociationsForDoctor(association.doctorId);
-  const conflict = findConflict(association, existingApproved);
-  if (conflict) {
-    throw new ApiError(
-      409,
-      `Cannot approve — this overlaps with an already-approved schedule (${conflict.dayOfWeek} ${conflict.startTime}-${conflict.endTime}) at another clinic`
-    );
-  }
-
-  return updateAssociationStatus(associationId, "APPROVED");
+  return approveAssociationSafely(associationId, association.doctorId);
 };
 
 export const getMyReceivedRequests = async (doctorUserId) => {
@@ -143,18 +136,52 @@ export const respondToDoctorRequest = async (clinicUserId, associationId, action
     return updateAssociationStatus(associationId, "REJECTED");
   }
 
-  const existingApproved = await findApprovedAssociationsForDoctor(association.doctorId);
-  const conflict = findConflict(association, existingApproved);
-  if (conflict) {
-    throw new ApiError(
-      409,
-      `Cannot approve — this overlaps with an already-approved schedule (${conflict.dayOfWeek} ${conflict.startTime}-${conflict.endTime}) at another clinic`
-    );
-  }
-
-  return updateAssociationStatus(associationId, "APPROVED");
+  return approveAssociationSafely(associationId, association.doctorId);
 };
- // Either the doctor or the clinic in this association can cancel an APPROVED (or PENDING) one.
+
+// Approves an association only if it's still PENDING and still conflict-free,
+// checked and written inside a single Serializable transaction. Postgres will
+// abort one side with a serialization failure (surfaced by Prisma as P2034)
+// if two concurrent approvals for the same doctor would otherwise both pass
+// the conflict check and create overlapping approved schedules.
+const approveAssociationSafely = async (associationId, doctorId) => {
+  try {
+    return await prisma.$transaction(
+      async (tx) => {
+        const current = await tx.doctorClinicAssociation.findUnique({ where: { id: associationId } });
+        if (!current || current.status !== "PENDING") {
+          throw new ApiError(
+            400,
+            `This request has already been ${current ? current.status.toLowerCase() : "removed"}`
+          );
+        }
+
+        const existingApproved = await tx.doctorClinicAssociation.findMany({
+          where: { doctorId, status: "APPROVED" },
+        });
+
+        const conflict = findConflict(current, existingApproved);
+        if (conflict) {
+          throw new ApiError(
+            409,
+            `Cannot approve — this overlaps with an already-approved schedule (${conflict.dayOfWeek} ${conflict.startTime}-${conflict.endTime}) at another clinic`
+          );
+        }
+
+        return tx.doctorClinicAssociation.update({ where: { id: associationId }, data: { status: "APPROVED" } });
+      },
+      { isolation: Prisma.TransactionIsolationLevel.Serializable }
+    );
+  } catch (err) {
+    if (err instanceof ApiError) throw err;
+    if (err.code === "P2034") {
+      throw new ApiError(409, "This approval conflicted with another concurrent request — please try again");
+    }
+    throw err;
+  }
+};
+
+// Either the doctor or the clinic in this association can cancel an APPROVED (or PENDING) one.
 // Cancelling an APPROVED association frees up that time slot for a conflicting PENDING request.
 export const cancelAssociation = async (userId, userRole, associationId) => {
   const association = await findAssociationById(associationId);
