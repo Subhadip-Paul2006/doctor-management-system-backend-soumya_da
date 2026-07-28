@@ -1,9 +1,7 @@
 import ApiError from "../../utils/apiError.js";
-import { findClinicByUserId } from "../clinic/clinic.repository.js";
-import { getAppointmentsForClinicOnDate, getAppointmentsForClinicInMonth } from "./report.repository.js";
+import { findClinicByUserId, findReceptionistByUserId } from "../clinic/clinic.repository.js";
+import { getAppointmentsForClinicOnDate, getAppointmentsForClinicInMonth, getDistinctPatientsForClinic, getDistinctPatientsForDoctorAtClinic } from "./report.repository.js";
 import { summarizeAppointments } from "./report.helper.js";
-import { findReceptionistByUserId } from "../clinic/clinic.repository.js";
-import { getDistinctPatientsForClinic } from "./report.repository.js";
 
 export const getDailyReport = async (clinicUserId, date) => {
   const clinic = await findClinicByUserId(clinicUserId);
@@ -29,10 +27,6 @@ export const getMonthlyReport = async (clinicUserId, month) => {
   return { clinicName: clinic.clinicName, month, ...summary };
 };
 
-export const findReceptionistByUserId = (userId) => {
-  return prisma.receptionist.findUnique({ where: { userId }, include: { clinic: true } });
-};
-
 // Resolves the clinicId (and clinic name) whether the caller is the Clinic itself or one of its Receptionists
 const resolveClinicContext = async (userId, userRole) => {
   if (userRole === "CLINIC") {
@@ -53,5 +47,16 @@ const resolveClinicContext = async (userId, userRole) => {
 export const getPatientListReport = async (userId, userRole) => {
   const { clinicId, clinicName } = await resolveClinicContext(userId, userRole);
   const patients = await getDistinctPatientsForClinic(clinicId);
+  return { clinicName, patients };
+};
+
+export const getDoctorPatientListReport = async (userId, userRole, doctorId, clinicId, date) => {
+  const { clinicId: contextClinicId, clinicName } = await resolveClinicContext(userId, userRole);
+
+  if (clinicId !== contextClinicId) {
+    throw new ApiError(403, "You can only access patient lists for your own clinic");
+  }
+
+  const patients = await getDistinctPatientsForDoctorAtClinic(doctorId, clinicId, date);
   return { clinicName, patients };
 };

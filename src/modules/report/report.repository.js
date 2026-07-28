@@ -36,3 +36,20 @@ export const getDistinctPatientsForClinic = async (clinicId) => {
     phone: appt.patient.user?.phone || appt.patient.phone,
   }));
 };
+
+export const getDistinctPatientsForDoctorAtClinic = async (doctorId, clinicId, date) => {
+  const appointments = await prisma.appointment.findMany({
+    where: { doctorId, clinicId, date: new Date(date) },
+    distinct: ["patientId"],
+    include: {
+      patient: { include: { user: { select: { name: true, phone: true } } } },
+    },
+  });
+
+  return appointments.map((appt) => ({
+    name: appt.patient.user?.name || appt.patient.name,
+    age: appt.patient.age,
+    dob: appt.patient.dob,
+    phone: appt.patient.user?.phone || appt.patient.phone,
+  }));
+};

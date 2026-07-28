@@ -26,4 +26,11 @@ router.get(
   reportController.getPatientListPDF
 );
 
+router.get(
+  "/doctors/:doctorId/clinics/:clinicId/patients/pdf",
+  authMiddleware,
+  roleMiddleware("CLINIC", "RECEPTIONIST"),
+  reportController.getDoctorPatientListPDF
+);
+
 export default router;
