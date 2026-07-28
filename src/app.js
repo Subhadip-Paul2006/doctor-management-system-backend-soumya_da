@@ -27,9 +27,12 @@ import dashboardRoutes from "./modules/dashboard/dashboard.routes.js";
 import passport from "./config/passport.config.js"; // google auth
 import reportRoutes from "./modules/report/report.routes.js"; // pdf 
 
+import swaggerUi from "swagger-ui-express";
+import { swaggerSpec } from "./config/swagger.config.js";
+
 const app = express();
 
-app.use(helmet());
+app.use(helmet({ contentSecurityPolicy: false }));
 app.use(
   cors({
     origin: env.CLIENT_URL,
@@ -68,6 +71,8 @@ app.use("/api/v1/doctors", doctorRoutes);
 app.use("/api/v1/dashboard", dashboardRoutes);
 
 app.use("/api/v1/reports", reportRoutes);
+
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use(notFoundMiddleware);
 app.use(errorMiddleware);
