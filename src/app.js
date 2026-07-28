@@ -72,7 +72,9 @@ app.use("/api/v1/dashboard", dashboardRoutes);
 
 app.use("/api/v1/reports", reportRoutes);
 
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+if (env.NODE_ENV == "development") {
+  app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+}
 
 app.use(notFoundMiddleware);
 app.use(errorMiddleware);
