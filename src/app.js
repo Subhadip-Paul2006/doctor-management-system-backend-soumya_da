@@ -74,6 +74,7 @@ app.use("/api/v1/reports", reportRoutes);
 
 if (env.NODE_ENV == "development") {
   app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+  
 }
 
 app.use(notFoundMiddleware);
