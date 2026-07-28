@@ -25,6 +25,7 @@ import doctorRoutes from "./modules/doctor/doctor.routes.js";
 import dashboardRoutes from "./modules/dashboard/dashboard.routes.js";
 
 import passport from "./config/passport.config.js"; // google auth
+import reportRoutes from "./modules/report/report.routes.js"; // pdf 
 
 const app = express();
 
@@ -65,6 +66,8 @@ app.use("/api/v1/announcements", announcementRoutes);
 app.use("/api/v1/doctors", doctorRoutes);
 
 app.use("/api/v1/dashboard", dashboardRoutes);
+
+app.use("/api/v1/reports", reportRoutes);
 
 app.use(notFoundMiddleware);
 app.use(errorMiddleware);

@@ -211,3 +211,6 @@ export const getHolidayForClinicDate = (clinicId, date) => {
     where: { clinicId_date: { clinicId, date: new Date(date) } },
   });
 };
+export const findReceptionistByUserId = (userId) => {
+  return prisma.receptionist.findUnique({ where: { userId }, include: { clinic: true } });
+};
