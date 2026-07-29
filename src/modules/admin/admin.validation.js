@@ -24,3 +24,12 @@ export const listClinicsQuerySchema = z.object({
 export const updateSettingsSchema = z.object({
   bookingWindowMinutes: z.number().int().positive("Must be a positive number of minutes"),
 });
+
+// superadmin create admin
+
+export const createAdminSchema = z.object({
+  name: z.string().min(2, "Name is required"),
+  email: z.string().email("Invalid email"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  phone: z.string().optional(),
+});

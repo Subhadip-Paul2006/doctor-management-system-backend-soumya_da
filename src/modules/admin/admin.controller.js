@@ -8,6 +8,7 @@ import {
 } from "./admin.validation.js";
 
 import { updateSettingsSchema } from "./admin.validation.js";
+import { createAdminSchema } from "./admin.validation.js";
 
 export const listClinics = asyncHandler(async (req, res) => {
   const query = listClinicsQuerySchema.parse(req.query);
@@ -63,4 +64,11 @@ export const updateSettings = asyncHandler(async (req, res) => {
   const data = updateSettingsSchema.parse(req.body);
   const settings = await adminService.updateSettings(data);
   res.status(200).json(new ApiResponse(true, "Platform settings updated", { settings }));
+});
+
+// super admin create admin
+export const createAdmin = asyncHandler(async (req, res) => {
+  const data = createAdminSchema.parse(req.body);
+  const admin = await adminService.createAdmin(data);
+  res.status(201).json(new ApiResponse(true, "Admin account created successfully", { admin }));
 });

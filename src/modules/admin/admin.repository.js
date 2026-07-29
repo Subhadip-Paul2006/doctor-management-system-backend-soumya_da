@@ -75,3 +75,10 @@ export const getPlatformSettings = () => {
 export const updatePlatformSettings = (id, data) => {
   return prisma.platformSetting.update({ where: { id }, data });
 };
+
+// super admin to admin
+export const createAdminUser = (data) => {
+  return prisma.user.create({
+    data: { ...data, role: "ADMIN", selfRegistered: false, isVerified: true },
+  });
+};

@@ -18,6 +18,10 @@ import {
   setUserActiveStatus,
 } from "../user/user.repository.js";
 
+import { hashPassword } from "../auth/auth.helper.js";
+import { findUserByEmail } from "../auth/auth.repository.js";
+import { createAdminUser } from "./admin.repository.js";
+
 export const getSettings = async () => {
   const settings = await getPlatformSettings();
   if (!settings) throw new ApiError(500, "Platform settings not initialized");
@@ -85,4 +89,18 @@ export const toggleUserStatus = async (userId, isActive) => {
 
 export const getStats = async () => {
   return getPlatformStats();
+};
+
+// super admin to admin
+
+
+export const createAdmin = async ({ name, email, password, phone }) => {
+  const existing = await findUserByEmail(email);
+  if (existing) throw new ApiError(409, "A user with this email already exists");
+
+  const hashedPassword = await hashPassword(password);
+  const user = await createAdminUser({ name, email, phone, password: hashedPassword });
+
+  const { password: _pw, refreshToken, ...safeUser } = user;
+  return safeUser;
 };

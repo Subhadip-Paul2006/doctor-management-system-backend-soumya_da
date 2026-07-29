@@ -156,7 +156,7 @@ router.patch("/users/:userId/status", adminController.toggleUserStatus);
  *     responses:
  *       200: { description: Platform settings fetched }
  */
-router.get("/settings", adminController.getSettings);
+router.get("/settings", roleMiddleware("SUPER_ADMIN"), adminController.getSettings);
 
 /**
  * @swagger
@@ -176,6 +176,31 @@ router.get("/settings", adminController.getSettings);
  *     responses:
  *       200: { description: Platform settings updated }
  */
-router.patch("/settings", adminController.updateSettings);
+router.patch("/settings", roleMiddleware("SUPER_ADMIN"), adminController.updateSettings);
+
+router.post("/admins", roleMiddleware("SUPER_ADMIN"), adminController.createAdmin);
+
+/**
+ * @swagger
+ * /admin/admins:
+ *   post:
+ *     summary: (Super Admin only) Create a new Admin account
+ *     tags: [Admin]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, email, password]
+ *             properties:
+ *               name: { type: string }
+ *               email: { type: string }
+ *               password: { type: string }
+ *               phone: { type: string }
+ *     responses:
+ *       201: { description: Admin account created successfully }
+ *       409: { description: A user with this email already exists }
+ */
 
 export default router;
