@@ -2,6 +2,7 @@ import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { env } from "./env.config.js";
 import prisma from "./db.config.js";
+import ApiError from "../utils/apiError.js";
 
 passport.use(
   new GoogleStrategy(
@@ -18,7 +19,17 @@ passport.use(
         let user = await prisma.user.findUnique({ where: { email } });
 
         if (user) {
-          // Existing user — link their Google account if not already linked
+          // Google sign-in is a Patient-only login method. Doctors, Receptionists,
+          // Clinics, Admins, and Super Admins are provisioned with a password and
+          // must not be able to authenticate (or have their account linked) via Google.
+          if (user.role !== "PATIENT") {
+            return done(
+              new ApiError(403, "Google sign-in is only available for Patient accounts. Please log in with your email and password."),
+              null
+            );
+          }
+
+          // Existing Patient — link their Google account if not already linked
           if (!user.googleId) {
             user = await prisma.user.update({
               where: { id: user.id },
