@@ -1,7 +1,7 @@
 import ApiError from "../../utils/apiError.js";
 import { hashPassword } from "../auth/auth.helper.js";
 import { findUserByEmail, updateUserPassword } from "../auth/auth.repository.js";
-import { uploadBufferToCloudinary } from "../../utils/cloudinaryUpload.js";
+import { uploadBufferToCloudinary, deleteFromCloudinary } from "../../utils/cloudinaryUpload.js";
 import { respondToDoctorRequest as respondToDoctorRequestCore } from "../doctor/doctor.service.js";
 import {
   findClinicByUserId,
@@ -181,8 +181,14 @@ export const uploadLogo = async (clinicUserId, fileBuffer) => {
   const clinic = await findClinicByUserId(clinicUserId);
   if (!clinic) throw new ApiError(404, "Clinic profile not found");
 
+  const oldLogo = clinic.logo;
+
   const result = await uploadBufferToCloudinary(fileBuffer, "jeet/clinics");
-  return updateClinicLogo(clinic.id, result.secure_url);
+  const updated = await updateClinicLogo(clinic.id, result.secure_url);
+
+  if (oldLogo) await deleteFromCloudinary(oldLogo);
+
+  return updated;
 };
 
 // holidays

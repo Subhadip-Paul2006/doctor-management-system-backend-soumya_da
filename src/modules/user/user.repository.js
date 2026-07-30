@@ -44,3 +44,15 @@ export const findUserByIdRaw = (id) => {
 export const setUserActiveStatus = (id, isActive) => {
   return prisma.user.update({ where: { id }, data: { isActive } });
 };
+
+export const findUserAvatarById = (id) => {
+  return prisma.user.findUnique({ where: { id }, select: { id: true, avatar: true } });
+};
+
+export const updateUserAvatar = (id, avatar) => {
+  return prisma.user.update({
+    where: { id },
+    data: { avatar },
+    select: { id: true, name: true, email: true, role: true, avatar: true },
+  });
+};

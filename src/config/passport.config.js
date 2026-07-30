@@ -29,6 +29,15 @@ passport.use(
             );
           }
 
+          // Existing Patient — block if their account has been deactivated
+          // (matches the isActive check the password-login flow already has).
+          if (!user.isActive) {
+            return done(
+              new ApiError(403, "Your account has been deactivated. Please contact support."),
+              null
+            );
+          }
+
           // Existing Patient — link their Google account if not already linked
           if (!user.googleId) {
             user = await prisma.user.update({

@@ -14,7 +14,7 @@ import {
   findRequestsForClinic,
 } from "./doctor.repository.js";
 import { findConflict } from "./schedule.helper.js";
-import { uploadBufferToCloudinary } from "../../utils/cloudinaryUpload.js";
+import { uploadBufferToCloudinary, deleteFromCloudinary } from "../../utils/cloudinaryUpload.js";
 import { updateDoctorProfilePhoto } from "./doctor.repository.js";
 
 export const searchByName = async (name) => {
@@ -212,6 +212,12 @@ export const uploadProfilePhoto = async (doctorUserId, fileBuffer) => {
   const doctor = await findDoctorByUserId(doctorUserId);
   if (!doctor) throw new ApiError(404, "Doctor profile not found");
 
+  const oldPhoto = doctor.profilePhoto;
+
   const result = await uploadBufferToCloudinary(fileBuffer, "jeet/doctors");
-  return updateDoctorProfilePhoto(doctor.id, result.secure_url);
+  const updated = await updateDoctorProfilePhoto(doctor.id, result.secure_url);
+
+  if (oldPhoto) await deleteFromCloudinary(oldPhoto);
+
+  return updated;
 };
