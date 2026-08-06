@@ -211,4 +211,40 @@ router.post(
   doctorController.uploadProfilePhoto
 );
 
+/**
+ * @swagger
+ * /doctors/{doctorId}/clinics/{clinicId}/consultation-time:
+ *   patch:
+ *     summary: Set a doctor's average consultation time at a specific clinic (used to estimate patient wait time)
+ *     tags: [Doctor]
+ *     parameters:
+ *       - in: path
+ *         name: doctorId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: clinicId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [avgConsultationMinutes]
+ *             properties:
+ *               avgConsultationMinutes: { type: integer, example: 10 }
+ *     responses:
+ *       200: { description: Consultation time updated }
+ *       403: { description: Not permitted to manage this doctor at this clinic }
+ *       404: { description: Doctor not found or not associated with this clinic }
+ */
+router.patch(
+  "/:doctorId/clinics/:clinicId/consultation-time",
+  authMiddleware,
+  roleMiddleware("DOCTOR", "CLINIC", "RECEPTIONIST", "SUPER_ADMIN", "ADMIN"),
+  doctorController.updateConsultationTime
+);
+
 export default router;

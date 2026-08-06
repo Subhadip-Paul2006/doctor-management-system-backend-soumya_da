@@ -155,3 +155,16 @@ export const getHolidayForClinicDate = (clinicId, date) => {
     where: { clinicId_date: { clinicId, date: new Date(date) } },
   });
 };
+
+
+export const getConsultationMinutesForDoctorClinic = async (doctorId, clinicId) => {
+  const doctor = await prisma.doctor.findUnique({ where: { id: doctorId } });
+  if (!doctor) return null;
+
+  if (doctor.clinicId === clinicId) return doctor.avgConsultationMinutes;
+
+  const association = await prisma.doctorClinicAssociation.findFirst({
+    where: { doctorId, clinicId, status: "APPROVED" },
+  });
+  return association?.avgConsultationMinutes || null;
+};

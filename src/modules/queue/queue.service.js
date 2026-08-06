@@ -10,8 +10,7 @@ import {
   createEmergencyAppointment,
   logQueueAction,
 } from "./queue.repository.js";
-import { QUEUE_ACTIONS } from "./queue.constants.js";
-import { emitQueueUpdate } from "../../sockets/queue.socket.js";
+import { QUEUE_ACTIONS, APPROACH_THRESHOLD } from "./queue.constants.js";
 
 const assertAccess = async (user, doctorId, clinicId) => {
   if (user.role === "CLINIC" || user.role === "SUPER_ADMIN" || user.role === "ADMIN") return;
@@ -67,11 +66,19 @@ export const nextToken = async (user, doctorId, clinicId, date) => {
 
   if (queue.currentToken > 0) {
     const prevAppointment = await findAppointmentByToken(doctorId, clinicId, date, queue.currentToken);
-    if (prevAppointment) await updateAppointmentStatus(prevAppointment.id, "COMPLETED");
+    if (prevAppointment) {
+      await updateAppointmentStatus(prevAppointment.id, "COMPLETED");
+      emitAppointmentNotification(prevAppointment.id, {
+        type: "COMPLETED",
+        message: "Your consultation is complete. Thank you!",
+        token: prevAppointment.token,
+      });
+    }
   }
 
   const newToken = queue.currentToken + 1;
   const updatedQueue = await setCurrentToken(queue.id, newToken);
+  await notifyApproaching(doctorId, clinicId, date, newToken);
 
   const nextAppointment = await findAppointmentByToken(doctorId, clinicId, date, newToken);
   if (nextAppointment) await updateAppointmentStatus(nextAppointment.id, "CHECKED_IN");

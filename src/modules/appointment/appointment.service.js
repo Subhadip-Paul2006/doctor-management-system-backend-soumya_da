@@ -85,15 +85,21 @@ export const getMyAppointments = async (patientUserId) => {
       if (queueMode === "PRIVATE") {
         return {
           ...appt,
-          queue: {
-            status: appt.queue.status,
-            // currentToken and lastTokenIssued intentionally omitted in PRIVATE mode
-          },
+          queue: { status: appt.queue.status },
           queueMode: "PRIVATE",
         };
       }
 
-      return { ...appt, queueMode: "LIVE" };
+      const patientsAhead = Math.max(appt.token - appt.queue.currentToken, 0);
+      const avgMinutes = await getConsultationMinutesForDoctorClinic(appt.doctorId, appt.clinicId);
+      const estimatedWaitMinutes = avgMinutes ? patientsAhead * avgMinutes : null;
+
+      return {
+        ...appt,
+        queueMode: "LIVE",
+        patientsAhead,
+        estimatedWaitMinutes,
+      };
     })
   );
 
@@ -222,3 +228,4 @@ const validateBookingWindow = async (doctorId, clinicId) => {
 const formatTime = (date) => {
   return date.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
 };
+

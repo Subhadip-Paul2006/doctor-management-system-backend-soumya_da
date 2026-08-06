@@ -9,6 +9,7 @@ import {
   sendRequestToClinicSchema,
   respondToRequestSchema,
 } from "./doctor.validation.js";
+import { updateConsultationTimeSchema } from "./doctor.validation.js";
 
 export const searchByName = asyncHandler(async (req, res) => {
   const { name } = searchDoctorsByNameSchema.parse(req.query);
@@ -63,4 +64,15 @@ export const uploadProfilePhoto = asyncHandler(async (req, res) => {
   if (!req.file) throw new ApiError(400, "No image file provided");
   const doctor = await doctorService.uploadProfilePhoto(req.user.id, req.file.buffer);
   res.status(200).json(new ApiResponse(true, "Profile photo uploaded", { doctor }));
+});
+
+export const updateConsultationTime = asyncHandler(async (req, res) => {
+  const { avgConsultationMinutes } = updateConsultationTimeSchema.parse(req.body);
+  const result = await doctorService.updateConsultationTime(
+    req.user,
+    req.params.doctorId,
+    req.params.clinicId,
+    avgConsultationMinutes
+  );
+  res.status(200).json(new ApiResponse(true, "Consultation time updated", { result }));
 });

@@ -32,3 +32,7 @@ export const sendRequestToClinicSchema = z.object({
 export const respondToRequestSchema = z.object({
   action: z.enum(["ACCEPT", "REJECT"]),
 });
+
+export const updateConsultationTimeSchema = z.object({
+  avgConsultationMinutes: z.number().int().positive().max(180),
+});

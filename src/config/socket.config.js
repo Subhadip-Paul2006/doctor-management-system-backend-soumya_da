@@ -24,6 +24,15 @@ export const initSocket = (httpServer, corsOrigin) => {
       socket.leave(`queue:${doctorId}:${clinicId}`);
     });
 
+    socket.on("joinAppointment", (appointmentId) => {
+      socket.join(`appointment:${appointmentId}`);
+      logger.info(`Socket ${socket.id} joined appointment:${appointmentId}`);
+    });
+
+    socket.on("leaveAppointment", (appointmentId) => {
+      socket.leave(`appointment:${appointmentId}`);
+    });
+
     socket.on("disconnect", () => {
       logger.info(`🔌 Socket disconnected: ${socket.id}`);
     });

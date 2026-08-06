@@ -17,6 +17,15 @@ import { findConflict } from "./schedule.helper.js";
 import { uploadBufferToCloudinary, deleteFromCloudinary } from "../../utils/cloudinaryUpload.js";
 import { updateDoctorProfilePhoto } from "./doctor.repository.js";
 
+import { findReceptionistAssignment } from "../queue/queue.repository.js";
+import {
+  updateDoctorAvgConsultation,
+  findApprovedAssociationByDoctorAndClinic,
+  updateAssociationAvgConsultation,
+} from "./doctor.repository.js";
+
+import { emitAppointmentNotification } from "../../sockets/notification.socket.js";
+
 export const searchByName = async (name) => {
   return searchDoctorsByName(name);
 };
@@ -220,4 +229,55 @@ export const uploadProfilePhoto = async (doctorUserId, fileBuffer) => {
   if (oldPhoto) await deleteFromCloudinary(oldPhoto);
 
   return updated;
+};
+
+// Settable by: the Doctor themselves, the Clinic they work at, an assigned Receptionist,
+// or Admin/Super Admin. Targets either the doctor's primary clinic (Doctor.avgConsultationMinutes)
+// or a secondary approved association (DoctorClinicAssociation.avgConsultationMinutes).
+export const updateConsultationTime = async (user, doctorId, clinicId, minutes) => {
+  const doctor = await findDoctorByIdWithUser(doctorId);
+  if (!doctor) throw new ApiError(404, "Doctor not found");
+
+  const isPrimaryClinic = doctor.clinicId === clinicId;
+  let association = null;
+
+  if (!isPrimaryClinic) {
+    association = await findApprovedAssociationByDoctorAndClinic(doctorId, clinicId);
+    if (!association) throw new ApiError(404, "Doctor is not associated with this clinic");
+  }
+
+  if (user.role === "SUPER_ADMIN" || user.role === "ADMIN") {
+    // allowed
+  } else if (user.role === "DOCTOR") {
+    if (doctor.userId !== user.id) throw new ApiError(403, "This is not your profile");
+  } else if (user.role === "CLINIC") {
+    const clinic = await findClinicByUserId(user.id);
+    if (!clinic || clinic.id !== clinicId) {
+      throw new ApiError(403, "You can only manage doctors at your own clinic");
+    }
+  } else if (user.role === "RECEPTIONIST") {
+    const assignment = await findReceptionistAssignment(user.id, doctorId, clinicId);
+    if (!assignment) {
+      throw new ApiError(403, "You are not assigned to manage this doctor at this clinic");
+    }
+  } else {
+    throw new ApiError(403, "You do not have permission to update this setting");
+  }
+
+  if (isPrimaryClinic) {
+    return updateDoctorAvgConsultation(doctorId, minutes);
+  }
+  return updateAssociationAvgConsultation(association.id, minutes);
+};
+
+const notifyApproaching = async (doctorId, clinicId, date, currentToken) => {
+  const targetToken = currentToken + APPROACH_THRESHOLD;
+  const upcoming = await findAppointmentByToken(doctorId, clinicId, date, targetToken);
+  if (upcoming) {
+    emitAppointmentNotification(upcoming.id, {
+      type: "APPROACHING",
+      message: `Your turn is approaching — ${APPROACH_THRESHOLD} patient(s) ahead of you.`,
+      token: upcoming.token,
+    });
+  }
 };

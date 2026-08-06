@@ -145,6 +145,7 @@ model Doctor {
   queueMode      QueueMode @default(LIVE)
   startTime      String?
   profilePhoto   String?
+  avgConsultationMinutes Int? // used to estimate patient wait time
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -349,6 +350,7 @@ model ClinicWorkingHours {
   openTime  String? // "HH:mm" — null if closed that day
   closeTime String? // "HH:mm"
   isClosed  Boolean @default(false)
+  avgConsultationMinutes Int?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

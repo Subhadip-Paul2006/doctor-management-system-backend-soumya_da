@@ -82,3 +82,18 @@ export const createClinicRequestFromDoctor = (data) => {
 export const updateDoctorProfilePhoto = (doctorId, profilePhoto) => {
   return prisma.doctor.update({ where: { id: doctorId }, data: { profilePhoto } });
 };
+
+export const updateDoctorAvgConsultation = (doctorId, minutes) => {
+  return prisma.doctor.update({ where: { id: doctorId }, data: { avgConsultationMinutes: minutes } });
+};
+
+export const findApprovedAssociationByDoctorAndClinic = (doctorId, clinicId) => {
+  return prisma.doctorClinicAssociation.findFirst({ where: { doctorId, clinicId, status: "APPROVED" } });
+};
+
+export const updateAssociationAvgConsultation = (associationId, minutes) => {
+  return prisma.doctorClinicAssociation.update({
+    where: { id: associationId },
+    data: { avgConsultationMinutes: minutes },
+  });
+};
