@@ -1,4 +1,5 @@
 import PDFDocument from "pdfkit";
+import { getPeriodLabel } from "../modules/report/report.helper.js";
 
 // Generates a PDF report (daily/monthly appointment summary) as a stream piped to res
 export const generateReportPDF = (res, filename, reportData) => {
@@ -10,7 +11,7 @@ export const generateReportPDF = (res, filename, reportData) => {
 
   doc.fontSize(18).text(`${reportData.clinicName} — Report`, { align: "center" });
   doc.moveDown();
-  doc.fontSize(12).text(`Period: ${reportData.date || reportData.month}`);
+  doc.fontSize(12).text(`Period: ${getPeriodLabel(reportData)}`);
   doc.moveDown();
 
   doc.fontSize(14).text("Summary", { underline: true });

@@ -17,13 +17,14 @@ import {
 import { OTP_EXPIRY_SECONDS, OTP_PREFIX } from "./auth.constants.js";
 import { sendEmail } from "../../utils/emailService.js";
 
-export const registerUser = async ({ name, email, password, phone, dob, role }) => {
+export const registerUser = async ({ name, email, password, phone, dob }) => {
   const existingUser = await findUserByEmail(email);
   if (existingUser) {
     throw new ApiError(409, "User with this email already exists");
   }
 
   const hashedPassword = await hashPassword(password);
+  const role = "PATIENT"; // self-registration is Patient-only
 
   const user = await createUserWithProfile({
     userData: { name, email, phone, role, password: hashedPassword },

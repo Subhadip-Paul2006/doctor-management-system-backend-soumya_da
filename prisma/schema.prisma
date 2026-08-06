@@ -126,6 +126,7 @@ model Clinic {
   workingHours ClinicWorkingHours[]
   holidays     ClinicHoliday[]
   receptionistDoctors ReceptionistDoctor[]
+  reviews             Review[]
 
   @@map("clinics")
 }
@@ -153,6 +154,7 @@ model Doctor {
   appointments          Appointment[]
   announcements         Announcement[]
   clinicAssociations    DoctorClinicAssociation[]
+  reviews               Review[]
 
   @@map("doctors")
 }
@@ -210,6 +212,7 @@ model Patient {
   updatedAt DateTime @updatedAt
 
   appointments Appointment[]
+  reviews      Review[]
 
   @@map("patients")
 }
@@ -266,6 +269,8 @@ model Appointment {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  review Review?
 
   @@unique([doctorId, clinicId, date, token])
   @@map("appointments")
@@ -363,4 +368,34 @@ model ClinicHoliday {
 
   @@unique([clinicId, date])
   @@map("clinic_holidays")
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Review {
+  id            String       @id @default(uuid())
+  appointment   Appointment  @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  appointmentId String       @unique
+  patient       Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patientId     String
+  doctor        Doctor       @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  doctorId      String
+  clinic        Clinic       @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  clinicId      String
+
+  rating  Int
+  comment String?
+  status  ReviewStatus @default(PENDING)
+
+  isReported   Boolean @default(false)
+  reportReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("reviews")
 }

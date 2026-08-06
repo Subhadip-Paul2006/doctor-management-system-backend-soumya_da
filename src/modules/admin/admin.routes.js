@@ -204,3 +204,32 @@ router.post("/admins", roleMiddleware("SUPER_ADMIN"), adminController.createAdmi
  */
 
 export default router;
+
+/**
+ * @swagger
+ * /admin/clinics:
+ *   post:
+ *     summary: (Admin/Super Admin) Create a new Clinic account — auto-approved since created by an admin
+ *     tags: [Admin]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, email, password, clinicName]
+ *             properties:
+ *               name: { type: string }
+ *               email: { type: string }
+ *               password: { type: string }
+ *               phone: { type: string }
+ *               clinicName: { type: string }
+ *               address: { type: string }
+ *               city: { type: string }
+ *               state: { type: string }
+ *               pincode: { type: string }
+ *     responses:
+ *       201: { description: Clinic account created successfully }
+ *       409: { description: A user with this email already exists }
+ */
+router.post("/clinics", adminController.createClinic);

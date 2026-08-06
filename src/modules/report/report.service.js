@@ -1,7 +1,13 @@
 import ApiError from "../../utils/apiError.js";
 import { findClinicByUserId, findReceptionistByUserId } from "../clinic/clinic.repository.js";
-import { getAppointmentsForClinicOnDate, getAppointmentsForClinicInMonth, getDistinctPatientsForClinic, getDistinctPatientsForDoctorAtClinic } from "./report.repository.js";
-import { summarizeAppointments } from "./report.helper.js";
+import {
+  getAppointmentsForClinicOnDate,
+  getAppointmentsForClinicInMonth,
+  getAppointmentsForClinicInRange,
+  getDistinctPatientsForClinic,
+  getDistinctPatientsForDoctorAtClinic,
+} from "./report.repository.js";
+import { summarizeAppointments, getWeekRange, getYearRange } from "./report.helper.js";
 
 export const getDailyReport = async (clinicUserId, date) => {
   const clinic = await findClinicByUserId(clinicUserId);
@@ -19,12 +25,53 @@ export const getMonthlyReport = async (clinicUserId, month) => {
 
   const [year, monthNum] = month.split("-").map(Number);
   const startDate = new Date(year, monthNum - 1, 1);
-  const endDate = new Date(year, monthNum, 0); // last day of month
+  const endDate = new Date(year, monthNum, 0, 23, 59, 59, 999);
 
   const appointments = await getAppointmentsForClinicInMonth(clinic.id, startDate, endDate);
   const summary = summarizeAppointments(appointments);
 
   return { clinicName: clinic.clinicName, month, ...summary };
+};
+
+export const getWeeklyReport = async (clinicUserId, date) => {
+  const clinic = await findClinicByUserId(clinicUserId);
+  if (!clinic) throw new ApiError(404, "Clinic profile not found");
+
+  const { start, end } = getWeekRange(date);
+  const appointments = await getAppointmentsForClinicInRange(clinic.id, start, end);
+  const summary = summarizeAppointments(appointments);
+
+  return {
+    clinicName: clinic.clinicName,
+    weekStart: start.toISOString().split("T")[0],
+    weekEnd: end.toISOString().split("T")[0],
+    ...summary,
+  };
+};
+
+export const getYearlyReport = async (clinicUserId, year) => {
+  const clinic = await findClinicByUserId(clinicUserId);
+  if (!clinic) throw new ApiError(404, "Clinic profile not found");
+
+  const { start, end } = getYearRange(Number(year));
+  const appointments = await getAppointmentsForClinicInRange(clinic.id, start, end);
+  const summary = summarizeAppointments(appointments);
+
+  return { clinicName: clinic.clinicName, year, ...summary };
+};
+
+export const getCustomRangeReport = async (clinicUserId, startDate, endDate) => {
+  const clinic = await findClinicByUserId(clinicUserId);
+  if (!clinic) throw new ApiError(404, "Clinic profile not found");
+
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  end.setHours(23, 59, 59, 999);
+
+  const appointments = await getAppointmentsForClinicInRange(clinic.id, start, end);
+  const summary = summarizeAppointments(appointments);
+
+  return { clinicName: clinic.clinicName, startDate, endDate, ...summary };
 };
 
 // Resolves the clinicId (and clinic name) whether the caller is the Clinic itself or one of its Receptionists

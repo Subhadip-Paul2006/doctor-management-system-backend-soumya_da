@@ -72,3 +72,9 @@ export const createAdmin = asyncHandler(async (req, res) => {
   const admin = await adminService.createAdmin(data);
   res.status(201).json(new ApiResponse(true, "Admin account created successfully", { admin }));
 });
+
+export const createClinic = asyncHandler(async (req, res) => {
+  const data = createClinicSchema.parse(req.body);
+  const result = await adminService.createClinic(data);
+  res.status(201).json(new ApiResponse(true, "Clinic account created successfully", result));
+});

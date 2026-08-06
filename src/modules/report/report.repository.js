@@ -11,10 +11,17 @@ export const getAppointmentsForClinicOnDate = (clinicId, date) => {
 
 export const getAppointmentsForClinicInMonth = (clinicId, startDate, endDate) => {
   return prisma.appointment.findMany({
-    where: {
-      clinicId,
-      date: { gte: startDate, lte: endDate },
+    where: { clinicId, date: { gte: startDate, lte: endDate } },
+    include: {
+      doctor: { include: { user: { select: { name: true } } } },
     },
+  });
+};
+
+// Generic date-range fetch — used by weekly, yearly, and custom-range reports
+export const getAppointmentsForClinicInRange = (clinicId, startDate, endDate) => {
+  return prisma.appointment.findMany({
+    where: { clinicId, date: { gte: startDate, lte: endDate } },
     include: {
       doctor: { include: { user: { select: { name: true } } } },
     },

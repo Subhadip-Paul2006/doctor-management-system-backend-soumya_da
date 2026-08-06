@@ -27,3 +27,36 @@ export const summarizeAppointments = (appointments) => {
 
   return summary;
 };
+
+// Monday-to-Sunday week containing the given date
+export const getWeekRange = (dateStr) => {
+  const date = new Date(dateStr);
+  const day = date.getDay(); // 0 = Sunday
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+
+  const start = new Date(date);
+  start.setDate(date.getDate() + diffToMonday);
+  start.setHours(0, 0, 0, 0);
+
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  end.setHours(23, 59, 59, 999);
+
+  return { start, end };
+};
+
+export const getYearRange = (year) => {
+  const start = new Date(year, 0, 1, 0, 0, 0, 0);
+  const end = new Date(year, 11, 31, 23, 59, 59, 999);
+  return { start, end };
+};
+
+// Picks whichever period field is present on a report object and formats it for display
+export const getPeriodLabel = (reportData) => {
+  if (reportData.date) return reportData.date;
+  if (reportData.month) return reportData.month;
+  if (reportData.year) return String(reportData.year);
+  if (reportData.weekStart && reportData.weekEnd) return `${reportData.weekStart} to ${reportData.weekEnd}`;
+  if (reportData.startDate && reportData.endDate) return `${reportData.startDate} to ${reportData.endDate}`;
+  return "";
+};

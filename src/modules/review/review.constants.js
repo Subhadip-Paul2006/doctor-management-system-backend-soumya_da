@@ -1,0 +1,5 @@
+export const REVIEW_STATUS = {
+  PENDING: "PENDING",
+  APPROVED: "APPROVED",
+  REJECTED: "REJECTED",
+};

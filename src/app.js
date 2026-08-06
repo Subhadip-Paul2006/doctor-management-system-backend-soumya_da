@@ -31,6 +31,8 @@ import reportRoutes from "./modules/report/report.routes.js"; // pdf
 import swaggerUi from "swagger-ui-express";
 import { swaggerSpec } from "./config/swagger.config.js";
 
+import reviewRoutes from "./modules/review/review.routes.js"; 
+
 const app = express();
 
 app.use(helmet({ contentSecurityPolicy: false }));
@@ -73,6 +75,8 @@ app.use("/api/v1/doctors", doctorRoutes);
 app.use("/api/v1/dashboard", dashboardRoutes);
 
 app.use("/api/v1/reports", reportRoutes);
+
+app.use("/api/v1/reviews", reviewRoutes);
 
 if (env.NODE_ENV == "development") {
   app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));

@@ -104,3 +104,25 @@ export const createAdmin = async ({ name, email, password, phone }) => {
   const { password: _pw, refreshToken, ...safeUser } = user;
   return safeUser;
 };
+
+import { createClinicUser } from "./admin.repository.js";
+import { updateClinicProfile } from "../clinic/clinic.repository.js";
+
+export const createClinic = async ({ name, email, password, phone, clinicName, address, city, state, pincode }) => {
+  const existing = await findUserByEmail(email);
+  if (existing) throw new ApiError(409, "A user with this email already exists");
+
+  const hashedPassword = await hashPassword(password);
+  const { user, clinic } = await createClinicUser({
+    userData: { name, email, phone, password: hashedPassword },
+    clinicName,
+  });
+
+  let finalClinic = clinic;
+  if (address || city || state || pincode) {
+    finalClinic = await updateClinicProfile(clinic.id, { clinicName, address, city, state, pincode });
+  }
+
+  const { password: _pw, refreshToken, ...safeUser } = user;
+  return { user: safeUser, clinic: finalClinic };
+};

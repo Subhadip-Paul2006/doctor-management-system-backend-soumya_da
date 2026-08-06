@@ -10,7 +10,7 @@ const router = Router();
  * @swagger
  * /auth/register:
  *   post:
- *     summary: Register a new Patient or Clinic account
+ *     summary: Register a new Patient account (self-registration is Patient-only; Clinic accounts are created by Admin/Super Admin)
  *     tags: [Auth]
  *     security: []
  *     requestBody:
@@ -36,10 +36,6 @@ const router = Router();
  *               dob:
  *                 type: string
  *                 format: date-time
- *               role:
- *                 type: string
- *                 enum: [PATIENT, CLINIC]
- *                 default: PATIENT
  *     responses:
  *       201:
  *         description: User registered successfully

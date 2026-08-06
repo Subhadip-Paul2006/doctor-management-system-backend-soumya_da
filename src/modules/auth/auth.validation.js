@@ -6,7 +6,6 @@ export const registerSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters"),
   phone: z.string().optional(),
   dob: z.string().datetime().optional(),
-  role: z.enum(["PATIENT", "CLINIC"]).default("PATIENT"),
 });
 
 export const loginSchema = z.object({

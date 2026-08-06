@@ -82,3 +82,17 @@ export const createAdminUser = (data) => {
     data: { ...data, role: "ADMIN", selfRegistered: false, isVerified: true },
   });
 };
+
+export const createClinicUser = ({ userData, clinicName }) => {
+  return prisma.$transaction(async (tx) => {
+    const user = await tx.user.create({
+      data: { ...userData, role: "CLINIC", selfRegistered: false, isVerified: true },
+    });
+
+    const clinic = await tx.clinic.create({
+      data: { userId: user.id, clinicName, isApproved: true },
+    });
+
+    return { user, clinic };
+  });
+};

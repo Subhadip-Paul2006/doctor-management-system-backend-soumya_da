@@ -1,31 +1,56 @@
 import asyncHandler from "../../utils/asyncHandler.js";
 import ApiResponse from "../../utils/apiResponse.js";
-import * as reportService from "./report.service.js";
-import { dailyReportSchema, monthlyReportSchema } from "./report.validation.js";
-import { generateReportPDF, generatePatientListPDF } from "../../utils/pdfGenerator.js";
-import { generateDoctorPatientListPDF } from "../../utils/pdfGenerator.js";
+import ApiError from "../../utils/apiError.js";
 import prisma from "../../config/db.config.js";
+import * as reportService from "./report.service.js";
+import {
+  dailyReportSchema,
+  monthlyReportSchema,
+  weeklyReportSchema,
+  yearlyReportSchema,
+  customRangeReportSchema,
+} from "./report.validation.js";
+import { generateReportPDF, generatePatientListPDF, generateDoctorPatientListPDF } from "../../utils/pdfGenerator.js";
+import { generateReportExcel } from "../../utils/excelGenerator.js";
+
+const sendReport = (res, report, format, filenameBase) => {
+  if (format === "pdf") {
+    return generateReportPDF(res, `${filenameBase}.pdf`, report);
+  }
+  if (format === "excel") {
+    return generateReportExcel(res, `${filenameBase}.xlsx`, report);
+  }
+  return res.status(200).json(new ApiResponse(true, "Report fetched", { report }));
+};
 
 export const getDailyReport = asyncHandler(async (req, res) => {
   const { date } = dailyReportSchema.parse(req.query);
   const report = await reportService.getDailyReport(req.user.id, date);
-
-  if (req.query.format === "pdf") {
-    return generateReportPDF(res, `daily-report-${date}.pdf`, report);
-  }
-
-  res.status(200).json(new ApiResponse(true, "Daily report fetched", { report }));
+  return sendReport(res, report, req.query.format, `daily-report-${date}`);
 });
 
 export const getMonthlyReport = asyncHandler(async (req, res) => {
   const { month } = monthlyReportSchema.parse(req.query);
   const report = await reportService.getMonthlyReport(req.user.id, month);
+  return sendReport(res, report, req.query.format, `monthly-report-${month}`);
+});
 
-  if (req.query.format === "pdf") {
-    return generateReportPDF(res, `monthly-report-${month}.pdf`, report);
-  }
+export const getWeeklyReport = asyncHandler(async (req, res) => {
+  const { date } = weeklyReportSchema.parse(req.query);
+  const report = await reportService.getWeeklyReport(req.user.id, date);
+  return sendReport(res, report, req.query.format, `weekly-report-${report.weekStart}-to-${report.weekEnd}`);
+});
 
-  res.status(200).json(new ApiResponse(true, "Monthly report fetched", { report }));
+export const getYearlyReport = asyncHandler(async (req, res) => {
+  const { year } = yearlyReportSchema.parse(req.query);
+  const report = await reportService.getYearlyReport(req.user.id, year);
+  return sendReport(res, report, req.query.format, `yearly-report-${year}`);
+});
+
+export const getCustomRangeReport = asyncHandler(async (req, res) => {
+  const { startDate, endDate } = customRangeReportSchema.parse(req.query);
+  const report = await reportService.getCustomRangeReport(req.user.id, startDate, endDate);
+  return sendReport(res, report, req.query.format, `report-${startDate}-to-${endDate}`);
 });
 
 export const getPatientListPDF = asyncHandler(async (req, res) => {
