@@ -183,15 +183,6 @@ router.patch("/settings", roleMiddleware("SUPER_ADMIN"), adminController.updateS
  * /admin/admins:
  *   post:
  *     summary: (Super Admin only) Create a new Admin account
- *     ...
- */
-router.post("/admins", roleMiddleware("SUPER_ADMIN"), adminController.createAdmin);
-
-/**
- * @swagger
- * /admin/admins:
- *   post:
- *     summary: (Super Admin only) Create a new Admin account
  *     tags: [Admin]
  *     requestBody:
  *       required: true
