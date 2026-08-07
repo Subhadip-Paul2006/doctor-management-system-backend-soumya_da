@@ -1,3 +1,4 @@
+import { notifyUser } from "../notification/notification.service.js";
 import ApiError from "../../utils/apiError.js";
 import prisma from "../../config/db.config.js";
 import { findClinicByUserId } from "../clinic/clinic.repository.js";
@@ -192,6 +193,17 @@ const bookAppointmentCore = async ({ doctorId, clinicId, patientId, date, bookin
         };
 
   emitQueueUpdate(doctorId, clinicId, broadcastPayload);
+
+  const patient = await getPatientById(patientId);
+  if (patient?.userId) {
+    await notifyUser({
+      userId: patient.userId,
+      type: "APPOINTMENT_BOOKED",
+      title: "Appointment booked",
+      message: `Your appointment is confirmed. Your token number is ${appointment.token}.`,
+      meta: { appointmentId: appointment.id, token: appointment.token },
+    });
+  }
 
   return appointment;
 };

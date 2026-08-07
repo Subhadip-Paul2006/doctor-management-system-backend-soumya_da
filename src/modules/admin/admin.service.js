@@ -1,3 +1,4 @@
+import { notifyUser } from "../notification/notification.service.js";
 import ApiError from "../../utils/apiError.js";
 import { getPlatformSettings, updatePlatformSettings } from "./admin.repository.js";
 
@@ -47,14 +48,32 @@ export const approveClinic = async (clinicId) => {
   if (!clinic) throw new ApiError(404, "Clinic not found");
   if (clinic.isApproved) throw new ApiError(400, "Clinic is already approved");
 
-  return setClinicApproval(clinicId, true);
+  const updated = await setClinicApproval(clinicId, true);
+
+  await notifyUser({
+    userId: clinic.userId,
+    type: "CLINIC_APPROVED",
+    title: "Your clinic has been approved",
+    message: `${clinic.clinicName} is now approved and visible to patients.`,
+  });
+
+  return updated;
 };
 
 export const revokeClinicApproval = async (clinicId) => {
   const clinic = await findClinicByIdRaw(clinicId);
   if (!clinic) throw new ApiError(404, "Clinic not found");
 
-  return setClinicApproval(clinicId, false);
+  const updated = await setClinicApproval(clinicId, false);
+
+  await notifyUser({
+    userId: clinic.userId,
+    type: "CLINIC_REVOKED",
+    title: "Your clinic approval has been revoked",
+    message: `${clinic.clinicName}'s approval has been revoked by the admin. Please contact support.`,
+  });
+
+  return updated;
 };
 
 export const listUnverifiedDoctors = async () => {
@@ -66,7 +85,16 @@ export const verifyDoctor = async (doctorId) => {
   if (!doctor) throw new ApiError(404, "Doctor not found");
   if (doctor.isVerified) throw new ApiError(400, "Doctor is already verified");
 
-  return setDoctorVerification(doctorId, true);
+  const updated = await setDoctorVerification(doctorId, true);
+
+  await notifyUser({
+    userId: doctor.userId,
+    type: "DOCTOR_VERIFIED",
+    title: "You're verified!",
+    message: "Your doctor profile has been verified by the admin. Patients can now book you.",
+  });
+
+  return updated;
 };
 
 export const listUsers = async ({ role, page, limit }) => {

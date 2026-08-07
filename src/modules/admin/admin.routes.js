@@ -178,6 +178,13 @@ router.get("/settings", roleMiddleware("SUPER_ADMIN"), adminController.getSettin
  */
 router.patch("/settings", roleMiddleware("SUPER_ADMIN"), adminController.updateSettings);
 
+/**
+ * @swagger
+ * /admin/admins:
+ *   post:
+ *     summary: (Super Admin only) Create a new Admin account
+ *     ...
+ */
 router.post("/admins", roleMiddleware("SUPER_ADMIN"), adminController.createAdmin);
 
 /**
@@ -203,7 +210,7 @@ router.post("/admins", roleMiddleware("SUPER_ADMIN"), adminController.createAdmi
  *       409: { description: A user with this email already exists }
  */
 
-export default router;
+
 
 /**
  * @swagger
@@ -233,3 +240,5 @@ export default router;
  *       409: { description: A user with this email already exists }
  */
 router.post("/clinics", adminController.createClinic);
+
+export default router;

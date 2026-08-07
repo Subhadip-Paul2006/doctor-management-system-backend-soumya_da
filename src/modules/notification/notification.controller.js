@@ -1,0 +1,28 @@
+import asyncHandler from "../../utils/asyncHandler.js";
+import ApiResponse from "../../utils/apiResponse.js";
+import * as notificationService from "./notification.service.js";
+import { listNotificationsQuerySchema } from "./notification.validation.js";
+
+export const getMyNotifications = asyncHandler(async (req, res) => {
+  const query = listNotificationsQuerySchema.parse(req.query);
+  const result = await notificationService.getMyNotifications(req.user.id, query);
+  res.status(200).json(new ApiResponse(true, "Notifications fetched", result));
+});
+
+export const getUnreadCount = asyncHandler(async (req, res) => {
+  const result = await notificationService.getUnreadCount(req.user.id);
+  res.status(200).json(new ApiResponse(true, "Unread count fetched", result));
+});
+
+export const markRead = asyncHandler(async (req, res) => {
+  const notification = await notificationService.markNotificationRead(
+    req.user.id,
+    req.params.notificationId
+  );
+  res.status(200).json(new ApiResponse(true, "Notification marked as read", { notification }));
+});
+
+export const markAllRead = asyncHandler(async (req, res) => {
+  await notificationService.markAllNotificationsRead(req.user.id);
+  res.status(200).json(new ApiResponse(true, "All notifications marked as read", null));
+});

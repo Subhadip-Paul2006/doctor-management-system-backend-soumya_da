@@ -8,7 +8,7 @@ import {
 } from "./admin.validation.js";
 
 import { updateSettingsSchema } from "./admin.validation.js";
-import { createAdminSchema } from "./admin.validation.js";
+import { createAdminSchema, createClinicSchema } from "./admin.validation.js";
 
 export const listClinics = asyncHandler(async (req, res) => {
   const query = listClinicsQuerySchema.parse(req.query);

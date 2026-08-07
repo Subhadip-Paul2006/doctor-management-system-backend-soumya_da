@@ -1,3 +1,4 @@
+import { notifyUser } from "../notification/notification.service.js";
 import ApiError from "../../utils/apiError.js";
 import prisma from "../../config/db.config.js";
 import { Prisma } from "@prisma/client";

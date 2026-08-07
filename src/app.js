@@ -32,6 +32,7 @@ import swaggerUi from "swagger-ui-express";
 import { swaggerSpec } from "./config/swagger.config.js";
 
 import reviewRoutes from "./modules/review/review.routes.js"; 
+import notificationRoutes from "./modules/notification/notification.routes.js";
 
 const app = express();
 
@@ -77,6 +78,8 @@ app.use("/api/v1/dashboard", dashboardRoutes);
 app.use("/api/v1/reports", reportRoutes);
 
 app.use("/api/v1/reviews", reviewRoutes);
+
+app.use("/api/v1/notifications", notificationRoutes);
 
 if (env.NODE_ENV == "development") {
   app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
