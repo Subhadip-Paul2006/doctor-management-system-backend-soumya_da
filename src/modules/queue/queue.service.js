@@ -1,4 +1,5 @@
 import ApiError from "../../utils/apiError.js";
+import prisma from "../../config/db.config.js";
 import {
   findQueue,
   findQueueWithAppointments,
@@ -10,7 +11,9 @@ import {
   createEmergencyAppointment,
   logQueueAction,
 } from "./queue.repository.js";
-import { QUEUE_ACTIONS, APPROACH_THRESHOLD } from "./queue.constants.js";
+import { QUEUE_ACTIONS } from "./queue.constants.js";
+import { emitQueueUpdate, emitTokenCalled, emitAppointmentCompleted } from "../../sockets/queue.socket.js";
+import { notifyUser } from "../notification/notification.service.js";
 
 const assertAccess = async (user, doctorId, clinicId) => {
   if (user.role === "CLINIC" || user.role === "SUPER_ADMIN" || user.role === "ADMIN") return;
@@ -68,22 +71,46 @@ export const nextToken = async (user, doctorId, clinicId, date) => {
     const prevAppointment = await findAppointmentByToken(doctorId, clinicId, date, queue.currentToken);
     if (prevAppointment) {
       await updateAppointmentStatus(prevAppointment.id, "COMPLETED");
-      emitAppointmentNotification(prevAppointment.id, {
-        type: "COMPLETED",
-        message: "Your consultation is complete. Thank you!",
+      emitAppointmentCompleted(doctorId, clinicId, {
+        appointmentId: prevAppointment.id,
         token: prevAppointment.token,
       });
+
+      const prevPatient = await prisma.patient.findUnique({ where: { id: prevAppointment.patientId } });
+      if (prevPatient?.userId) {
+        await notifyUser({
+          userId: prevPatient.userId,
+          type: "GENERAL",
+          title: "Consultation Complete",
+          message: `Your consultation (Token #${prevAppointment.token}) has been completed.`,
+          meta: { appointmentId: prevAppointment.id, doctorId, clinicId, date },
+        });
+      }
     }
   }
 
   const newToken = queue.currentToken + 1;
   const updatedQueue = await setCurrentToken(queue.id, newToken);
-  await notifyApproaching(doctorId, clinicId, date, newToken);
 
   const nextAppointment = await findAppointmentByToken(doctorId, clinicId, date, newToken);
-  if (nextAppointment) await updateAppointmentStatus(nextAppointment.id, "CHECKED_IN");
+  if (nextAppointment) {
+    await updateAppointmentStatus(nextAppointment.id, "CHECKED_IN");
+
+    const nextPatient = await prisma.patient.findUnique({ where: { id: nextAppointment.patientId } });
+    if (nextPatient?.userId) {
+      await notifyUser({
+        userId: nextPatient.userId,
+        type: "GENERAL",
+        title: "Your Turn",
+        message: `Token #${newToken} is now being called. Please proceed to the consultation room.`,
+        meta: { appointmentId: nextAppointment.id, doctorId, clinicId, date },
+      });
+    }
+  }
 
   await logQueueAction(queue.id, QUEUE_ACTIONS.NEXT, user.id, { newToken });
+
+  emitTokenCalled(doctorId, clinicId, { token: newToken, appointmentId: nextAppointment?.id || null });
 
   return broadcastAndReturn(doctorId, clinicId, date, updatedQueue);
 };

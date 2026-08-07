@@ -1,8 +1,8 @@
-import { notifyUser } from "../notification/notification.service.js";
 import ApiError from "../../utils/apiError.js";
 import prisma from "../../config/db.config.js";
 import { findClinicByUserId } from "../clinic/clinic.repository.js";
 import { findReceptionistAssignment } from "../queue/queue.repository.js";
+import { notifyUser } from "../notification/notification.service.js";
 import {
   searchDoctors,
   getBookableClinicsForDoctor,
@@ -16,6 +16,7 @@ import {
   getClinicById,
   getWorkingHoursForClinicDay,
   getHolidayForClinicDate,
+  getConsultationMinutesForDoctorClinic,
 } from "./appointment.repository.js";
 import { emitQueueUpdate } from "../../sockets/queue.socket.js";
 
@@ -83,32 +84,27 @@ export const getMyAppointments = async (patientUserId) => {
     appointments.map(async (appt) => {
       const queueMode = await getQueueModeForDoctorClinic(appt.doctorId, appt.clinicId);
 
+      const patientsAhead = Math.max(0, appt.token - appt.queue.currentToken - 1);
+      const consultationMinutes = await getConsultationMinutesForDoctorClinic(appt.doctorId, appt.clinicId);
+      const estimatedWaitMinutes = patientsAhead * consultationMinutes;
+
       if (queueMode === "PRIVATE") {
         return {
           ...appt,
           queue: { status: appt.queue.status },
           queueMode: "PRIVATE",
+          patientsAhead,
+          estimatedWaitMinutes,
         };
       }
 
-      const patientsAhead = Math.max(appt.token - appt.queue.currentToken, 0);
-      const avgMinutes = await getConsultationMinutesForDoctorClinic(appt.doctorId, appt.clinicId);
-      const estimatedWaitMinutes = avgMinutes ? patientsAhead * avgMinutes : null;
-
-      return {
-        ...appt,
-        queueMode: "LIVE",
-        patientsAhead,
-        estimatedWaitMinutes,
-      };
+      return { ...appt, queueMode: "LIVE", patientsAhead, estimatedWaitMinutes };
     })
   );
 
   return appointmentsWithVisibility;
 };
 
-// Ensures the calling Receptionist/Clinic actually has the right to book
-// against this specific doctorId + clinicId pair.
 const assertReceptionBookingAccess = async (user, clinicId, doctorId) => {
   if (user.role === "SUPER_ADMIN" || user.role === "ADMIN") return;
 
@@ -131,8 +127,6 @@ const assertReceptionBookingAccess = async (user, clinicId, doctorId) => {
   throw new ApiError(403, "You do not have permission to book this appointment");
 };
 
-// Ensures the requested clinicId is actually one this doctor can be booked at
-// (their primary clinic, or an APPROVED secondary association)
 const assertBookableClinic = async (doctorId, clinicId) => {
   const bookableClinicIds = await getBookableClinicsForDoctor(doctorId);
   if (!bookableClinicIds.includes(clinicId)) {
@@ -194,23 +188,20 @@ const bookAppointmentCore = async ({ doctorId, clinicId, patientId, date, bookin
 
   emitQueueUpdate(doctorId, clinicId, broadcastPayload);
 
-  const patient = await getPatientById(patientId);
+  const patient = await prisma.patient.findUnique({ where: { id: patientId } });
   if (patient?.userId) {
     await notifyUser({
       userId: patient.userId,
       type: "APPOINTMENT_BOOKED",
-      title: "Appointment booked",
-      message: `Your appointment is confirmed. Your token number is ${appointment.token}.`,
-      meta: { appointmentId: appointment.id, token: appointment.token },
+      title: "Appointment Confirmed",
+      message: `Your appointment is confirmed — Token #${appointment.token} for ${date}.`,
+      meta: { appointmentId: appointment.id, doctorId, clinicId, date, token: appointment.token },
     });
   }
 
   return appointment;
 };
 
-// Booking-window rule (startTime) is currently only defined on the doctor's
-// primary clinic record; secondary clinic associations don't yet carry their
-// own startTime restriction — only their dayOfWeek/startTime/endTime schedule window.
 const validateBookingWindow = async (doctorId, clinicId) => {
   const doctor = await getDoctorById(doctorId);
   if (!doctor) throw new ApiError(404, "Doctor not found");
@@ -240,4 +231,3 @@ const validateBookingWindow = async (doctorId, clinicId) => {
 const formatTime = (date) => {
   return date.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
 };
-

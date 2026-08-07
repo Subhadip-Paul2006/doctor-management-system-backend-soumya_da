@@ -1,10 +1,11 @@
-# Jeet Backend — Doctor Appointment & Clinic Management System
+# DEWASI GROUP — Doctor Appointment & Clinic Management System 
+#DOCTOR CONTACT
 
 A production-grade backend for a multi-clinic, multi-role healthcare appointment and queue management platform. Built with Node.js, Express, Prisma, PostgreSQL (Supabase), Redis, and Socket.io.
 
 Live deployment: https://doctor-management-system-backend.onrender.com
 Health check: `GET /api/v1/health`
-API Docs (local only): `http://localhost:8000/api-docs`
+API Docs (local only, disabled in production): `http://localhost:8000/api-docs`
 
 ---
 
@@ -36,13 +37,14 @@ API Docs (local only): `http://localhost:8000/api-docs`
 | ORM | Prisma 6.x (deliberately not upgraded to 7 — breaking changes to datasource config) |
 | Cache / Pub-Sub | Redis (ioredis) — Upstash in production |
 | Realtime | Socket.io |
-| Auth | JWT (access + refresh tokens, hashed at rest), Google OAuth (Passport.js) |
+| Auth | JWT (access + refresh tokens, hashed at rest), Google OAuth (Passport.js, Patient-only) |
 | Validation | Zod |
 | Logging | Pino |
 | Password Hashing | bcrypt |
 | Email | Nodemailer |
-| File Storage | Cloudinary (profile photos, clinic logos) |
+| File Storage | Cloudinary (profile photos, clinic logos, avatars) |
 | PDF Generation | PDFKit |
+| Excel Generation | ExcelJS |
 | API Docs | swagger-jsdoc + swagger-ui-express |
 | Rate Limiting | express-rate-limit |
 | Containerization | Docker |
@@ -65,7 +67,7 @@ Feature-based modular architecture. Each module under `src/modules/<name>/` foll
   <module>.helper.js       — small pure helper functions
 ```
 
-Controllers never talk to Prisma directly; services never build HTTP responses. This keeps business logic testable and swappable independent of the transport layer.
+Controllers never talk to Prisma directly; services never build HTTP responses.
 
 ---
 
@@ -73,42 +75,42 @@ Controllers never talk to Prisma directly; services never build HTTP responses. 
 
 Six roles share a single `User` table, with role-specific profile tables:
 
-- **SUPER_ADMIN** — platform owner, manages global settings (e.g. booking window)
-- **ADMIN** — approves clinics, verifies doctors, manages users
-- **CLINIC** — manages its own doctors, receptionists, working hours, holidays, announcements
-- **RECEPTIONIST** — manages assigned doctors' queues, books walk-in/phone appointments
-- **DOCTOR** — has a global profile, can work at multiple clinics via approved associations
-- **PATIENT** — books appointments, views queue status, manages own profile
+- **SUPER_ADMIN** — platform owner, manages global settings (booking window, etc.), creates Admin and Clinic accounts.
+- **ADMIN** — approves clinics, verifies doctors, manages users, creates Clinic accounts, moderates reviews. Cannot touch platform-wide settings — that's Super Admin only.
+- **CLINIC** — manages its own doctors, receptionists, working hours, holidays, announcements.
+- **RECEPTIONIST** — manages assigned doctors' queues, books walk-in/phone appointments.
+- **DOCTOR** — has a global profile, can work at multiple clinics via approved associations.
+- **PATIENT** — books appointments, views queue status, submits reviews, manages own profile.
 
-Only **PATIENT** and **CLINIC** self-register. Doctor and Receptionist accounts are created by a Clinic Admin, who sets their initial login credentials.
+**Public self-registration (`POST /auth/register`) is Patient-only.** Clinic accounts are created exclusively by Super Admin or Admin (`POST /admin/clinics`, auto-approved). Doctor and Receptionist accounts are created by a Clinic, which sets their initial login credentials. Admin accounts are created exclusively by Super Admin (`POST /admin/admins`).
 
 ---
 
 ## Features by Module
 
 ### Auth
-- Register/login with email + password (JWT access + refresh tokens)
+- Register (Patient-only) / login (JWT access + refresh tokens)
 - Refresh token rotation, refresh tokens are SHA-256 hashed at rest (not stored in plaintext)
-- Logout (clears refresh token)
-- Forgot/reset password via email OTP (Redis-backed, 5-minute expiry) — restricted to self-registered accounts only; Clinic/Admin must reset Doctor/Receptionist passwords manually
-- Google OAuth login (auto-creates a Patient account on first login, links by email if the account already exists)
+- Logout, forgot/reset password via email OTP — restricted to self-registered accounts only
+- Google OAuth login — **Patient accounts only**; any other role attempting Google sign-in is rejected with a clear error
 - Role-based access control (RBAC) middleware on every protected route
 
 ### Clinic
 - Clinic profile management
 - Create Doctor and Receptionist accounts (with clinic-set initial passwords)
-- Assign receptionists to one or more doctors (many-to-many)
-- Change Doctor/Receptionist password (staff cannot change their own)
-- Upload clinic logo (Cloudinary)
+- Assign receptionists to one or more doctors, scoped per-clinic (a receptionist's assignment to a doctor is specific to one clinic, correctly isolating access when that doctor also works elsewhere)
+- Change Doctor/Receptionist password (staff cannot change their own — Clinic or Super Admin only)
+- Upload clinic logo; update a doctor's photo or a receptionist's avatar on their behalf (old Cloudinary asset auto-deleted on replacement)
 - Configure working hours per day of week, add/remove holidays, toggle online-consultation availability
 - Approve or reject incoming doctor connection requests (multi-clinic feature)
 
-### Doctor
+### Doctor (Multi-Clinic)
 - Global doctor profile, independent of any single clinic
 - Search doctors by name (Clinic side) / search clinics by name (Doctor side)
-- Send/receive/accept/reject clinic connection requests, with automatic schedule-conflict detection (rejects an approval if the requested day+time overlaps an already-approved association elsewhere)
+- Send/receive/accept/reject clinic connection requests, with automatic schedule-conflict detection — conflict checks are enforced inside a Serializable transaction at approval time to prevent race conditions between two concurrent overlapping approvals
 - Cancel an approved or pending association
-- Upload profile photo (Cloudinary)
+- Upload profile photo (Cloudinary, old asset auto-deleted on replacement)
+- Set average consultation minutes per clinic (used for patient wait-time estimates) — editable by the Doctor themselves, their Clinic, an assigned Receptionist, or Admin/Super Admin
 
 ### Patient
 - Two patient types:
@@ -119,43 +121,58 @@ Only **PATIENT** and **CLINIC** self-register. Doctor and Receptionist accounts 
 
 ### Appointment
 - Search bookable doctors by name, clinic, city, or clinic+date (returns live queue snapshot)
-- Online booking (Patient) — subject to:
-  - The doctor's configured booking-window rule (only bookable within N minutes of their `startTime`, N configurable platform-wide by Super Admin)
-  - Clinic's working hours / holidays
-  - Clinic's online-consultation toggle
-- Reception booking (Receptionist/Clinic) for walk-in, phone, or existing patients — bypasses the online booking-window and online-toggle restrictions (but still respects holidays/closed days)
+- Online booking (Patient) — subject to booking-window rule, clinic working hours/holidays, and the clinic's online-consultation toggle
+- Reception booking (Receptionist/Clinic) for walk-in, phone, or existing patients — bypasses the online-only restrictions but still respects holidays/closed days; access is strictly scoped (a Receptionist can only book for doctor+clinic pairs they're assigned to; a Clinic can only book for its own doctors)
 - Fully independent, sequential token counter **per doctor per clinic per day** — online and reception bookings share the same counter
-- Patient's own appointment list, with queue detail redacted if the doctor's queue mode is PRIVATE
+- Patient's own appointment list includes a live `patientsAhead` count and `estimatedWaitMinutes` (derived from the doctor's configured consultation time) — shown even when the queue mode is PRIVATE, since it's a personalized estimate rather than a global queue-state leak
+- Queue detail is redacted (no `currentToken`/`lastTokenIssued`) if the doctor's queue mode is PRIVATE
 
 ### Queue
 - Full queue lifecycle: Next, Previous, Skip, Recall (specific token), Pause, Resume, Close, Reopen, Emergency token insertion
 - All actions logged to an audit trail (`QueueLog`)
-- Live updates broadcast via Socket.io, room-scoped per doctor+clinic
-- Strict access control: a Receptionist can only control queues for doctors they are specifically assigned to; Clinic/Admin/Super Admin bypass this
-- Queue modes: **LIVE** (full visibility) and **PRIVATE** (patients see only their own token + status, not the live position) — **TIME_SLOT** mode is defined in the schema but not yet implemented (deferred)
+- Live updates broadcast via Socket.io, room-scoped per doctor+clinic (`queue:{doctorId}:{clinicId}`)
+- Two additional live events: `tokenCalled` (fires on every Next) and `appointmentCompleted` (fires when a patient's consultation finishes) — both also trigger a **persisted** notification (see Notifications module) so patients see it even if they weren't connected at that moment
+- Strict access control: a Receptionist can only control queues for doctor+clinic pairs they're specifically assigned to; Clinic/Admin/Super Admin bypass this
+- Queue modes: **LIVE** (full visibility) and **PRIVATE** (patients see only their own token + status) — **TIME_SLOT** mode is defined in the schema but not yet implemented
+
+### Notifications
+- Persisted, database-backed notification inbox (separate from the ephemeral Socket.io events above — this is durable history)
+- Auto-created on: appointment booked, token called ("your turn"), consultation completed
+- List own notifications (paginated), unread count (for a badge), mark one or all as read
+- `notifyUser()` never throws — a failed notification write never blocks the action that triggered it
+
+### Reviews & Feedback
+- Patient submits a 1–5 star rating + written review, tied to a specific **completed** appointment (one review per appointment, enforced)
+- Reviews start `PENDING` and are invisible publicly until an Admin approves them
+- Average rating computed live via aggregation (never stale/cached) per doctor and per clinic
+- Any authenticated user can report a review as inappropriate; Admin has a dedicated moderation queue for both pending and reported reviews
 
 ### Admin
-- Approve/reject clinic registrations
+- Approve/reject clinic registrations; create Clinic accounts directly (auto-approved)
 - Verify doctors
 - List/deactivate any user account
-- Platform-wide settings (booking window minutes, etc.)
+- Create Admin accounts (Super Admin only)
+- Platform-wide settings — booking window minutes, etc. (Super Admin only; Admin is explicitly blocked from this)
 - Platform stats (total users, clinics, doctors, patients, approval counts)
+- Update any Doctor's photo, Clinic's logo, or user's avatar on their behalf
 
 ### Announcement
 - Platform-wide announcements (Super Admin/Admin)
-- Clinic-specific announcements, optionally tied to a specific doctor (e.g. "Dr. X absent today")
+- Clinic-specific announcements, optionally tied to a specific doctor
 - Live broadcast via Socket.io to clients subscribed to that clinic's room
 - Deactivation (Clinic can only deactivate their own; Admin can deactivate any)
 
 ### Dashboard
 - Doctor dashboard: total clinics, total patients, clinic-wise patient count, today's appointments, upcoming schedule, pending/approved clinic requests
 - Clinic dashboard: total/active doctors, pending/approved/rejected doctor requests, today's appointments, queue summary
-- Note: dashboards currently reflect real booking data only for a doctor's *primary* clinic; secondary/associated clinics show correctly in lists but patient counts there are not yet wired (flagged in the API response itself)
+- Note: dashboards currently reflect real booking data only for a doctor's *primary* clinic; secondary/associated clinics show correctly in lists but patient counts there are not yet aggregated
 
 ### Reports
-- Daily and monthly clinic reports — JSON or downloadable PDF (`?format=pdf`) — with status breakdown, booking-source breakdown, per-doctor breakdown, and estimated revenue
-- Full clinic patient list PDF (Name, Age, Phone) — accessible to Clinic and Receptionist
-- Doctor + clinic + date-scoped patient list PDF (Name, Age, DOB, Phone) — strict exact-date matching, includes all booking sources
+- **Daily, weekly (Mon–Sun), monthly, yearly, and custom date-range** clinic reports
+- Every report available as JSON, PDF, or **Excel** (`?format=json|pdf|excel`)
+- Status breakdown, booking-source breakdown, per-doctor breakdown, estimated revenue
+- Full clinic patient list PDF (Name, Age, Phone) — Clinic and Receptionist
+- Doctor + clinic + exact-date-scoped patient list PDF (Name, Age, DOB, Phone) — includes all booking sources
 
 ---
 
@@ -167,9 +184,11 @@ src/
   server.js              — HTTP server bootstrap, Socket.io init, graceful shutdown
   config/                — env, db, redis, logger, socket, cloudinary, passport, swagger config
   middlewares/            — auth, role, error, rate limiter, upload, 404 handler
-  modules/                — one folder per feature (see Architecture above)
+  modules/                — auth, clinic, doctor, patient, appointment, queue, admin,
+                              announcement, dashboard, report, review, notification, user
   sockets/                — Socket.io event emitters (queue, announcement)
-  utils/                  — ApiError, ApiResponse, asyncHandler, token generator, PDF generator, Cloudinary upload, email service
+  utils/                  — ApiError, ApiResponse, asyncHandler, token generator,
+                              PDF generator, Excel generator, Cloudinary upload, email service
 prisma/
   schema.prisma           — full data model
   migrations/             — migration history
@@ -194,8 +213,6 @@ npx prisma migrate dev
 node prisma/seed.js    # creates Super Admin + platform settings row
 npm run dev
 ```
-
-Server runs on the port set in `.env` (`PORT`, e.g. `8000`).
 
 ---
 
@@ -233,7 +250,7 @@ CLOUDINARY_API_SECRET=
 CLIENT_URL=              # frontend URL, used for CORS and OAuth redirect
 ```
 
-**Never commit `.env`.** It's already in `.gitignore`.
+**Never commit `.env`.**
 
 ---
 
@@ -242,11 +259,10 @@ CLIENT_URL=              # frontend URL, used for CORS and OAuth redirect
 - PostgreSQL, hosted on Supabase
 - Prisma ORM — schema in `prisma/schema.prisma`
 - Migrations tracked in `prisma/migrations/`
-- One seed script (`prisma/seed.js`) creates the initial Super Admin account and the single required `PlatformSetting` row
+- Seed script creates the initial Super Admin account and the single required `PlatformSetting` row
 
-To apply migrations against a fresh database:
 ```bash
-npx prisma migrate deploy
+npx prisma migrate deploy   # apply migrations against a fresh database
 ```
 
 ---
@@ -257,7 +273,7 @@ npx prisma migrate deploy
 docker compose up --build
 ```
 
-This starts the app (port 8000) plus a local Redis container. Postgres is not containerized — it always points at Supabase, even in local Docker development.
+Starts the app (port 8000) plus a local Redis container. Postgres always points at Supabase, even in local Docker development.
 
 ---
 
@@ -265,17 +281,15 @@ This starts the app (port 8000) plus a local Redis container. Postgres is not co
 
 Deployed on **Render**, connected directly to this GitHub repo — every push to `main` triggers an automatic rebuild from the `Dockerfile`.
 
-- **Database:** Supabase (same as local, or a separate production project — your choice)
-- **Redis:** Upstash (free tier), using a `rediss://` (TLS) connection string
-- **Environment variables:** set individually in Render's dashboard — never committed to the repo
-
-To deploy elsewhere (Railway, Fly.io, a VPS), the existing `Dockerfile` should work with any Docker-compatible host with minimal changes.
+- **Database:** Supabase
+- **Redis:** Upstash (`rediss://` TLS connection string)
+- **Environment variables:** set individually in Render's dashboard, never committed
 
 ---
 
 ## API Documentation
 
-Interactive Swagger UI is available at `/api-docs`, but **only when `NODE_ENV !== "production"`** — it's intentionally disabled in production to avoid exposing the full API surface publicly. Run locally to browse and test every endpoint with request/response schemas and a "Try it out" button.
+Interactive Swagger UI at `/api-docs` — **only available when `NODE_ENV !== "production"`**, intentionally disabled in production to avoid exposing the full API surface publicly.
 
 ---
 
@@ -283,26 +297,25 @@ Interactive Swagger UI is available at `/api-docs`, but **only when `NODE_ENV !=
 
 - Passwords hashed with bcrypt
 - Refresh tokens hashed (SHA-256) before storage — never stored in plaintext
-- JWT access tokens (short-lived) + refresh tokens (long-lived, rotated on use)
-- Role-based access control on every protected route
+- JWT access tokens (short-lived) + rotated refresh tokens
+- Strict, per-clinic-scoped role-based access control — a Receptionist's doctor assignment is specific to one clinic, preventing cross-clinic privilege escalation when a doctor works at multiple locations
 - Rate limiting: 300 req/15min globally, 10 req/15min on login/register, 5 req/hour on OTP endpoints
-- Helmet for security headers (CSP disabled specifically to allow Swagger UI to render — fine for a JSON API with no other HTML pages)
+- Helmet security headers (CSP disabled specifically to allow Swagger UI to render)
 - CORS restricted to `CLIENT_URL`
 - Input validation on every endpoint via Zod
-- Strict clinic-scoping on receptionist queue access (can only control doctors they're explicitly assigned to)
+- Google OAuth restricted to Patient accounts only — staff/admin roles must use email+password
 
 ---
 
 ## Known Limitations / Roadmap
 
-Deliberately deferred or left incomplete:
-
-- **No automated tests** — Jest/Supertest were planned but never implemented
-- **Time Slot queue mode** — schema field exists (`queueMode: TIME_SLOT`), but booking logic isn't built; only LIVE and PRIVATE modes are functional
-- **Prescription module** — skipped; many clinics aren't using digital prescriptions yet
-- **Pharmacy module** — skipped, same reasoning
-- **Dashboard data for secondary clinics** — a doctor's Doctor/Clinic dashboard only reflects real appointment data for their *primary* clinic; associated/secondary clinics show correctly in lists but patient counts there aren't aggregated yet
-- A few empty leftover module folders (`notification/`, unused parts of `user/` and `receptionist/`) exist as scaffolding from early planning — harmless, safe to remove
+- **No automated test suite** — Jest/Supertest were planned but never implemented
+- **Time Slot queue mode** — schema field exists, booking logic isn't built; only LIVE and PRIVATE modes are functional
+- **Prescription and Pharmacy modules** — deliberately out of scope for this version
+- **Dashboard data for secondary clinics** — a doctor's Doctor/Clinic dashboard only reflects real appointment data for their *primary* clinic
+- **Patient Growth & Analytics** (trend graphs, growth-rate %, new-vs-returning patient classification) and **Daily Patient Dashboard** — requested by the client, not yet built
+- No device push notifications (FCM/APNs) — real-time signals are Socket.io (live, requires an open connection) plus a persisted in-app notification inbox; no notifications reach a closed app
+- A few empty leftover module folders/files exist as scaffolding from early planning — harmless
 
 ---
 
