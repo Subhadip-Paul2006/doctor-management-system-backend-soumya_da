@@ -2,5 +2,10 @@
   "name": "@doctor/config",
   "version": "1.0.0",
   "private": true,
-  "main": "./index.js"
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./tailwind": "./tailwind/tailwind.config.js",
+    "./env": "./env.js"
+  }
 }
