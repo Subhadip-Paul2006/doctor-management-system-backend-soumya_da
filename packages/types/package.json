@@ -2,9 +2,11 @@
   "name": "@doctor/types",
   "version": "1.0.0",
   "private": true,
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
-  "scripts": {
-    "type-check": "tsc --noEmit"
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
   }
 }
