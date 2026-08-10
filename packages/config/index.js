@@ -1,4 +1,4 @@
-// @doctor/config — shared frontend configuration entry point (JS)
-module.exports = {
-  tailwind: require("./tailwind/tailwind.config.js"),
-};
+// @doctor/config — shared frontend configuration entry point (JS, CommonJS).
+const { envSchema, validateEnv } = require("./env.js");
+
+module.exports = { envSchema, validateEnv };

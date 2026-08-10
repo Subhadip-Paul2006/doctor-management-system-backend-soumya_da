@@ -6,7 +6,12 @@
   "exports": {
     ".": "./index.js",
     "./tailwind": "./tailwind/tailwind.config.js",
-    "./env": "./env.js"
+    "./tailwind/tailwind.config": "./tailwind/tailwind.config.js",
+    "./tailwind/tailwind.config.js": "./tailwind/tailwind.config.js",
+    "./env": "./env.js",
+    "./tsconfig/*": "./tsconfig/*",
+    "./eslint": "./eslint/index.js",
+    "./package.json": "./package.json"
   },
   "dependencies": {
     "zod": "^4.4.3"

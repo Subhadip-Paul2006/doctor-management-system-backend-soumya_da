@@ -1,6 +1,7 @@
 /**
  * Shared environment resolution + Zod validation foundation (Phase 01).
  * Validates the public env vars the frontend apps rely on.
+ * CommonJS: this package also hosts tailwind/eslint configs loaded via require().
  */
 const { z } = require("zod");
 
