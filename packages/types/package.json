@@ -2,9 +2,11 @@
   "name": "@doctor/types",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "main": "./index.js",
   "exports": {
-    ".": "./index.js"
+    ".": "./index.js",
+    "./package.json": "./package.json"
   },
   "dependencies": {
     "zod": "^4.4.3"

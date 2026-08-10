@@ -2,12 +2,11 @@
   "name": "@doctor/ui",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "main": "./index.js",
   "exports": {
-    ".": "./index.js"
-  },
-  "scripts": {
-    "type-check": "tsc --noEmit"
+    ".": "./index.js",
+    "./package.json": "./package.json"
   },
   "peerDependencies": {
     "react": "^18.3.0",
