@@ -36,3 +36,12 @@ export const respondToRequestSchema = z.object({
 export const updateConsultationTimeSchema = z.object({
   avgConsultationMinutes: z.number().int().positive().max(180),
 });
+
+export const markLeaveSchema = z.object({
+  date: z.string(),
+  reason: z.string().max(500).optional(),
+});
+
+export const delayNotificationSchema = z.object({
+  delayMinutes: z.number().int().positive().max(300),
+});

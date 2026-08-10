@@ -15,6 +15,8 @@ enum Role {
   RECEPTIONIST
   DOCTOR
   PATIENT
+  DIAGNOSTIC_CENTER
+  DIAGNOSTIC_STAFF
 }
 
 enum AuthProvider {
@@ -95,6 +97,8 @@ model User {
   doctor       Doctor?
   receptionist Receptionist?
   patient      Patient?
+  diagnosticCenter      DiagnosticCenter?
+  diagnosticCenterStaff DiagnosticCenterStaff?
   notifications Notification[]
 
   @@map("users")
@@ -128,6 +132,10 @@ model Clinic {
   holidays     ClinicHoliday[]
   receptionistDoctors ReceptionistDoctor[]
   reviews             Review[]
+  doctorLeaves        DoctorLeave[]
+  referredTestRecommendations TestRecommendation[] @relation("ReferringClinic")
+  targetedTestRecommendations TestRecommendation[] @relation("TargetClinic")
+  testReferrals TestReferral[]
 
   @@map("clinics")
 }
@@ -157,6 +165,7 @@ model Doctor {
   announcements         Announcement[]
   clinicAssociations    DoctorClinicAssociation[]
   reviews               Review[]
+  leaves                DoctorLeave[]
 
   @@map("doctors")
 }
@@ -215,6 +224,8 @@ model Patient {
 
   appointments Appointment[]
   reviews      Review[]
+  testRecommendations TestRecommendation[]
+  testReferrals TestReferral[]
 
   @@map("patients")
 }
@@ -273,6 +284,10 @@ model Appointment {
   updatedAt DateTime @updatedAt
 
   review Review?
+  cancelReason      String?
+  cancelledBy       String? // userId of whoever cancelled it
+  testRecommendations TestRecommendation[]
+  testReferrals TestReferral[]
 
   @@unique([doctorId, clinicId, date, token])
   @@map("appointments")
@@ -427,4 +442,106 @@ model Notification {
 
   @@index([userId, isRead])
   @@map("notifications")
+}
+
+model DoctorLeave {
+  id       String @id @default(uuid())
+  doctor   Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  doctorId String
+  clinic   Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  clinicId String
+  date     DateTime @db.Date
+  reason   String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([doctorId, clinicId, date])
+  @@map("doctor_leaves")
+}
+
+model TestRecommendation {
+  id            String       @id @default(uuid())
+  patient       Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patientId     String
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  appointmentId String?
+
+  testName String
+  notes    String?
+
+  referringClinic   Clinic? @relation("ReferringClinic", fields: [referringClinicId], references: [id], onDelete: SetNull)
+  referringClinicId String?
+
+  targetClinic     Clinic? @relation("TargetClinic", fields: [targetClinicId], references: [id], onDelete: SetNull)
+  targetClinicId   String?
+  targetCenterName String?
+
+  createdByUserId String
+  createdByRole   Role
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("test_recommendations")
+}
+
+model DiagnosticCenter {
+  id         String  @id @default(uuid())
+  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String  @unique
+  centerName String
+  address    String?
+  city       String?
+  state      String?
+  pincode    String?
+  latitude   Float?
+  longitude  Float?
+  logo       String?
+  isApproved Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  staff             DiagnosticCenterStaff[]
+  incomingReferrals TestReferral[]
+
+  @@map("diagnostic_centers")
+}
+
+model DiagnosticCenterStaff {
+  id                 String           @id @default(uuid())
+  user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId             String           @unique
+  diagnosticCenter   DiagnosticCenter @relation(fields: [diagnosticCenterId], references: [id], onDelete: Cascade)
+  diagnosticCenterId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("diagnostic_center_staff")
+}
+
+model TestReferral {
+  id            String       @id @default(uuid())
+  patient       Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patientId     String
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  appointmentId String?
+
+  testNames String[]
+  notes     String?
+
+  referringClinic   Clinic? @relation(fields: [referringClinicId], references: [id], onDelete: SetNull)
+  referringClinicId String?
+
+  diagnosticCenter   DiagnosticCenter @relation(fields: [diagnosticCenterId], references: [id], onDelete: Cascade)
+  diagnosticCenterId String
+
+  createdByUserId String
+  createdByRole   Role
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("test_referrals")
 }

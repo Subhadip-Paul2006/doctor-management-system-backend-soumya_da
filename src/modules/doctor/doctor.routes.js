@@ -247,4 +247,128 @@ router.patch(
   doctorController.updateConsultationTime
 );
 
+/**
+ * @swagger
+ * /doctors/{doctorId}/clinics/{clinicId}/leave:
+ *   post:
+ *     summary: Mark a doctor on leave for a specific date at a specific clinic
+ *     tags: [Doctor]
+ *     parameters:
+ *       - in: path
+ *         name: doctorId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: clinicId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [date]
+ *             properties:
+ *               date: { type: string, example: "2026-08-20" }
+ *               reason: { type: string }
+ *     responses:
+ *       201: { description: Doctor marked on leave }
+ *       409: { description: Already on leave for this date }
+ */
+router.post(
+  "/:doctorId/clinics/:clinicId/leave",
+  authMiddleware,
+  roleMiddleware("DOCTOR", "CLINIC", "RECEPTIONIST", "SUPER_ADMIN", "ADMIN"),
+  doctorController.markLeave
+);
+
+/**
+ * @swagger
+ * /doctors/{doctorId}/clinics/{clinicId}/leave:
+ *   delete:
+ *     summary: Cancel a doctor's leave for a specific date
+ *     tags: [Doctor]
+ *     parameters:
+ *       - in: path
+ *         name: doctorId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: clinicId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: query
+ *         name: date
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200: { description: Leave cancelled }
+ *       404: { description: No leave found for this date }
+ */
+router.delete(
+  "/:doctorId/clinics/:clinicId/leave",
+  authMiddleware,
+  roleMiddleware("DOCTOR", "CLINIC", "RECEPTIONIST", "SUPER_ADMIN", "ADMIN"),
+  doctorController.cancelLeave
+);
+
+/**
+ * @swagger
+ * /doctors/{doctorId}/clinics/{clinicId}/leave:
+ *   get:
+ *     summary: List a doctor's upcoming leave dates at a specific clinic
+ *     tags: [Doctor]
+ *     parameters:
+ *       - in: path
+ *         name: doctorId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: clinicId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200: { description: Upcoming leaves fetched }
+ */
+router.get(
+  "/:doctorId/clinics/:clinicId/leave",
+  authMiddleware,
+  doctorController.listLeaves
+);
+
+/**
+ * @swagger
+ * /doctors/{doctorId}/clinics/{clinicId}/delay:
+ *   post:
+ *     summary: Notify today's waiting patients that the doctor is running late
+ *     tags: [Doctor]
+ *     parameters:
+ *       - in: path
+ *         name: doctorId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: clinicId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [delayMinutes]
+ *             properties:
+ *               delayMinutes: { type: integer, example: 20 }
+ *     responses:
+ *       200: { description: Delay notification sent }
+ */
+router.post(
+  "/:doctorId/clinics/:clinicId/delay",
+  authMiddleware,
+  roleMiddleware("DOCTOR", "CLINIC", "RECEPTIONIST", "SUPER_ADMIN", "ADMIN"),
+  doctorController.notifyDelay
+);
+
 export default router;

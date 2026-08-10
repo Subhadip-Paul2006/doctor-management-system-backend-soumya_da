@@ -9,7 +9,7 @@ import {
   sendRequestToClinicSchema,
   respondToRequestSchema,
 } from "./doctor.validation.js";
-import { updateConsultationTimeSchema } from "./doctor.validation.js";
+import { updateConsultationTimeSchema, markLeaveSchema, delayNotificationSchema  } from "./doctor.validation.js";
 
 export const searchByName = asyncHandler(async (req, res) => {
   const { name } = searchDoctorsByNameSchema.parse(req.query);
@@ -75,4 +75,37 @@ export const updateConsultationTime = asyncHandler(async (req, res) => {
     avgConsultationMinutes
   );
   res.status(200).json(new ApiResponse(true, "Consultation time updated", { result }));
+});
+
+export const markLeave = asyncHandler(async (req, res) => {
+  const { date, reason } = markLeaveSchema.parse(req.body);
+  const leave = await doctorService.markDoctorOnLeave(
+    req.user,
+    req.params.doctorId,
+    req.params.clinicId,
+    date,
+    reason
+  );
+  res.status(201).json(new ApiResponse(true, "Doctor marked on leave", { leave }));
+});
+
+export const cancelLeave = asyncHandler(async (req, res) => {
+  await doctorService.cancelDoctorLeave(req.user, req.params.doctorId, req.params.clinicId, req.query.date);
+  res.status(200).json(new ApiResponse(true, "Leave cancelled"));
+});
+
+export const listLeaves = asyncHandler(async (req, res) => {
+  const leaves = await doctorService.listUpcomingDoctorLeaves(req.params.doctorId, req.params.clinicId);
+  res.status(200).json(new ApiResponse(true, "Upcoming leaves fetched", { leaves }));
+});
+
+export const notifyDelay = asyncHandler(async (req, res) => {
+  const { delayMinutes } = delayNotificationSchema.parse(req.body);
+  const result = await doctorService.notifyDoctorDelay(
+    req.user,
+    req.params.doctorId,
+    req.params.clinicId,
+    delayMinutes
+  );
+  res.status(200).json(new ApiResponse(true, "Delay notification sent", result));
 });

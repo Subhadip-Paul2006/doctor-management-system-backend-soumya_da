@@ -13,18 +13,21 @@ import {
   updateAssociationStatus,
   findRequestsForDoctor,
   findRequestsForClinic,
+  createDoctorLeave,
+  removeDoctorLeave,
+  findLeaveForDate,
+  findUpcomingLeaves,
 } from "./doctor.repository.js";
 import { findConflict } from "./schedule.helper.js";
 import { uploadBufferToCloudinary, deleteFromCloudinary } from "../../utils/cloudinaryUpload.js";
 import { updateDoctorProfilePhoto } from "./doctor.repository.js";
-
+import { emitDoctorDelay } from "../../sockets/queue.socket.js";
 import { findReceptionistAssignment } from "../queue/queue.repository.js";
 import {
   updateDoctorAvgConsultation,
   findApprovedAssociationByDoctorAndClinic,
   updateAssociationAvgConsultation,
 } from "./doctor.repository.js";
-
 import { emitAppointmentNotification } from "../../sockets/notification.socket.js";
 
 export const searchByName = async (name) => {
@@ -281,4 +284,97 @@ const notifyApproaching = async (doctorId, clinicId, date, currentToken) => {
       token: upcoming.token,
     });
   }
+};
+
+// Access check reused for leave management and delay notifications —
+// same rule as consultation-time updates: Doctor (self), Clinic (own doctor),
+// assigned Receptionist, or Admin/Super Admin.
+const assertDoctorClinicManageAccess = async (user, doctorId, clinicId) => {
+  const doctor = await findDoctorByIdWithUser(doctorId);
+  if (!doctor) throw new ApiError(404, "Doctor not found");
+
+  if (user.role === "SUPER_ADMIN" || user.role === "ADMIN") return;
+
+  if (user.role === "DOCTOR") {
+    if (doctor.userId !== user.id) {
+      throw new ApiError(403, "You can only manage your own schedule");
+    }
+    return;
+  }
+
+  if (user.role === "CLINIC") {
+    const clinic = await findClinicByUserId(user.id);
+    if (!clinic || clinic.id !== clinicId) {
+      throw new ApiError(403, "You can only manage doctors at your own clinic");
+    }
+    return;
+  }
+
+  if (user.role === "RECEPTIONIST") {
+    const assignment = await findReceptionistAssignment(user.id, doctorId, clinicId);
+    if (!assignment) {
+      throw new ApiError(403, "You are not assigned to manage this doctor at this clinic");
+    }
+    return;
+  }
+
+  throw new ApiError(403, "You do not have permission to manage this");
+};
+
+export const markDoctorOnLeave = async (user, doctorId, clinicId, date, reason) => {
+  await assertDoctorClinicManageAccess(user, doctorId, clinicId);
+
+  const existing = await findLeaveForDate(doctorId, clinicId, date);
+  if (existing) throw new ApiError(409, "Doctor is already marked on leave for this date");
+
+  return createDoctorLeave(doctorId, clinicId, date, reason);
+};
+
+export const cancelDoctorLeave = async (user, doctorId, clinicId, date) => {
+  await assertDoctorClinicManageAccess(user, doctorId, clinicId);
+
+  const result = await removeDoctorLeave(doctorId, clinicId, date);
+  if (result.count === 0) throw new ApiError(404, "No leave found for this date");
+  return { removed: true };
+};
+
+export const listUpcomingDoctorLeaves = async (doctorId, clinicId) => {
+  return findUpcomingLeaves(doctorId, clinicId);
+};
+
+// Doctor Delay — a lighter signal than leave: broadcasts to today's queue watchers
+// and notifies every patient with a WAITING/CHECKED_IN appointment today, without
+// blocking new bookings.
+export const notifyDoctorDelay = async (user, doctorId, clinicId, delayMinutes) => {
+  await assertDoctorClinicManageAccess(user, doctorId, clinicId);
+
+  const today = new Date().toISOString().split("T")[0];
+
+  const appointments = await prisma.appointment.findMany({
+    where: {
+      doctorId,
+      clinicId,
+      date: new Date(today),
+      status: { in: ["WAITING", "CHECKED_IN"] },
+    },
+    include: { patient: true },
+  });
+
+  emitDoctorDelay(doctorId, clinicId, { delayMinutes, date: today });
+
+  await Promise.all(
+    appointments
+      .filter((a) => a.patient.userId)
+      .map((a) =>
+        notifyUser({
+          userId: a.patient.userId,
+          type: "GENERAL",
+          title: "Doctor Running Late",
+          message: `The doctor is running approximately ${delayMinutes} minutes behind schedule today.`,
+          meta: { doctorId, clinicId, date: today, delayMinutes },
+        })
+      )
+  );
+
+  return { notified: appointments.length };
 };

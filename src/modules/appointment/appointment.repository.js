@@ -168,3 +168,23 @@ export const getConsultationMinutesForDoctorClinic = async (doctorId, clinicId) 
   });
   return association?.avgConsultationMinutes || null;
 };
+
+export const findAppointmentByIdFull = (id) => {
+  return prisma.appointment.findUnique({
+    where: { id },
+    include: { patient: true },
+  });
+};
+
+export const cancelAppointmentRecord = (id, { cancelReason, cancelledBy }) => {
+  return prisma.appointment.update({
+    where: { id },
+    data: { status: "CANCELLED", cancelReason, cancelledBy },
+  });
+};
+
+export const getDoctorLeaveForDate = (doctorId, clinicId, date) => {
+  return prisma.doctorLeave.findUnique({
+    where: { doctorId_clinicId_date: { doctorId, clinicId, date: new Date(date) } },
+  });
+};

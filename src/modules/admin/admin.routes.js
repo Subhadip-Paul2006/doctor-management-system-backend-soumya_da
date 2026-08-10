@@ -232,4 +232,9 @@ router.patch("/settings", roleMiddleware("SUPER_ADMIN"), adminController.updateS
  */
 router.post("/clinics", adminController.createClinic);
 
+router.post("/diagnostic-centers", adminController.createDiagnosticCenter);
+router.get("/diagnostic-centers", adminController.listDiagnosticCenters);
+router.patch("/diagnostic-centers/:centerId/approve", adminController.approveDiagnosticCenter);
+router.patch("/diagnostic-centers/:centerId/revoke", adminController.revokeDiagnosticCenter);
+
 export default router;

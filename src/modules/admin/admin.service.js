@@ -23,6 +23,13 @@ import { hashPassword } from "../auth/auth.helper.js";
 import { findUserByEmail } from "../auth/auth.repository.js";
 import { createAdminUser } from "./admin.repository.js";
 
+import { createDiagnosticCenterUser, 
+  findAllDiagnosticCenters, 
+  findDiagnosticCenterByIdRaw, 
+  setDiagnosticCenterApproval } from "./admin.repository.js";
+
+  import prisma from "../../config/db.config.js";
+
 export const getSettings = async () => {
   const settings = await getPlatformSettings();
   if (!settings) throw new ApiError(500, "Platform settings not initialized");
@@ -153,4 +160,43 @@ export const createClinic = async ({ name, email, password, phone, clinicName, a
 
   const { password: _pw, refreshToken, ...safeUser } = user;
   return { user: safeUser, clinic: finalClinic };
+};
+
+export const createDiagnosticCenter = async ({ name, email, password, phone, centerName, address, city, state, pincode }) => {
+  const existing = await findUserByEmail(email);
+  if (existing) throw new ApiError(409, "A user with this email already exists");
+
+  const hashedPassword = await hashPassword(password);
+  const { user, diagnosticCenter } = await createDiagnosticCenterUser({
+    userData: { name, email, phone, password: hashedPassword },
+    centerName,
+  });
+
+  let finalCenter = diagnosticCenter;
+  if (address || city || state || pincode) {
+    finalCenter = await prisma.diagnosticCenter.update({
+      where: { id: diagnosticCenter.id },
+      data: { address, city, state, pincode },
+    });
+  }
+
+  const { password: _pw, refreshToken, ...safeUser } = user;
+  return { user: safeUser, diagnosticCenter: finalCenter };
+};
+
+export const listDiagnosticCenters = async ({ isApproved, page, limit }) => {
+  return findAllDiagnosticCenters({ isApproved, page, limit });
+};
+
+export const approveDiagnosticCenter = async (id) => {
+  const center = await findDiagnosticCenterByIdRaw(id);
+  if (!center) throw new ApiError(404, "Diagnostic center not found");
+  if (center.isApproved) throw new ApiError(400, "Diagnostic center is already approved");
+  return setDiagnosticCenterApproval(id, true);
+};
+
+export const revokeDiagnosticCenterApproval = async (id) => {
+  const center = await findDiagnosticCenterByIdRaw(id);
+  if (!center) throw new ApiError(404, "Diagnostic center not found");
+  return setDiagnosticCenterApproval(id, false);
 };
