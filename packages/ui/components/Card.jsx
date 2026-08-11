@@ -1,5 +1,12 @@
 import { cx } from "./_cx";
 
+/**
+ * @param {Object} props
+ * @param {boolean} [props.interactive]
+ * @param {string} [props.padding]
+ * @param {string} [props.className]
+ * @param {React.ReactNode} [props.children]
+ */
 export function Card({ interactive = false, padding = "p-5", className = "", children, ...props }) {
   return (
     <div
@@ -16,6 +23,13 @@ export function Card({ interactive = false, padding = "p-5", className = "", chi
   );
 }
 
+/**
+ * @param {Object} props
+ * @param {React.ReactNode} [props.title]
+ * @param {React.ReactNode} [props.subtitle]
+ * @param {React.ReactNode} [props.action]
+ * @param {string} [props.className]
+ */
 export function CardHeader({ title, subtitle, action, className = "" }) {
   return (
     <div className={cx("mb-4 flex items-start justify-between gap-4", className)}>
@@ -28,10 +42,20 @@ export function CardHeader({ title, subtitle, action, className = "" }) {
   );
 }
 
+/**
+ * @param {Object} props
+ * @param {string} [props.className]
+ * @param {React.ReactNode} [props.children]
+ */
 export function CardBody({ className = "", children }) {
   return <div className={cx("text-sm text-navy-800", className)}>{children}</div>;
 }
 
+/**
+ * @param {Object} props
+ * @param {string} [props.className]
+ * @param {React.ReactNode} [props.children]
+ */
 export function CardFooter({ className = "", children }) {
   return <div className={cx("mt-4 border-t border-navy-200 pt-4", className)}>{children}</div>;
 }
