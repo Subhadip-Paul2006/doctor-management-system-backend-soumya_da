@@ -1,5 +1,13 @@
 import { cx } from "./_cx";
 
+/**
+ * @param {Object} props
+ * @param {import('react').ReactNode} [props.icon]
+ * @param {import('react').ReactNode} [props.title]
+ * @param {import('react').ReactNode} [props.description]
+ * @param {import('react').ReactNode} [props.action]
+ * @param {string} [props.className]
+ */
 export function EmptyState({ icon = null, title, description, action = null, className = "" }) {
   return (
     <div className={cx("flex flex-col items-center justify-center text-center px-6 py-12", className)}>
