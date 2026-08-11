@@ -174,7 +174,10 @@ Six roles share a single `User` table, with role-specific profile tables:
 - Full clinic patient list PDF (Name, Age, Phone) — Clinic and Receptionist
 - Doctor + clinic + exact-date-scoped patient list PDF (Name, Age, DOB, Phone) — includes all booking sources
 
-###  
+###  diagnosticCenter
+
+
+### diagonostic staff
 
 ---
 
