@@ -1,5 +1,13 @@
 import { Breadcrumbs } from "./Breadcrumbs";
 
+/**
+ * @param {Object} props
+ * @param {{label: string, href?: string}[]} [props.breadcrumbs]
+ * @param {import('react').ReactNode} [props.title]
+ * @param {import('react').ReactNode} [props.description]
+ * @param {import('react').ReactNode} [props.actions]
+ * @param {string} [props.className]
+ */
 export function PageHeader({ breadcrumbs, title, description, actions, className = "" }) {
   return (
     <div className={className}>
