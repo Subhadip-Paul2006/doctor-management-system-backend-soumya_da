@@ -67,4 +67,46 @@ export const reviewSchema = z.object({
   comment: z.string().trim().max(500, "Keep the review under 500 characters").optional().or(z.literal("")),
 });
 
+// ---------------------------------------------------------------------------
+// Phase 06 — Doctor schedule manager (apps/staff-dashboard).
+// Mirrors Doctor.queueMode / Doctor.avgConsultationMinutes and the
+// DoctorClinicAssociation weekly rows from docs/BACKEND_FRONTEND_CONTRACT.md
+// §3.2/§3.4. UI-side validation only; backend remains source of truth
+// (PUT /api/v1/doctors/schedule).
+// ---------------------------------------------------------------------------
+
+export const QUEUE_MODES = ["LIVE", "TIME_SLOT", "PRIVATE"];
+
+const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+export const scheduleDaySchema = z
+  .object({
+    dayOfWeek: z.enum(["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"]),
+    status: z.enum(["ACTIVE", "INACTIVE"]),
+    startTime: z.string().optional(),
+    endTime: z.string().optional(),
+  })
+  .superRefine((row, ctx) => {
+    if (row.status !== "ACTIVE") return;
+    if (!row.startTime || !timePattern.test(row.startTime)) {
+      ctx.addIssue({ code: "custom", path: ["startTime"], message: "Start time (HH:mm) required" });
+    }
+    if (!row.endTime || !timePattern.test(row.endTime)) {
+      ctx.addIssue({ code: "custom", path: ["endTime"], message: "End time (HH:mm) required" });
+    }
+    if (row.startTime && row.endTime && timePattern.test(row.startTime) && timePattern.test(row.endTime) && row.endTime <= row.startTime) {
+      ctx.addIssue({ code: "custom", path: ["endTime"], message: "End must be after start" });
+    }
+  });
+
+export const doctorScheduleSchema = z.object({
+  queueMode: z.enum(QUEUE_MODES, { message: "Select a queue mode" }),
+  avgConsultationMinutes: z
+    .coerce.number({ invalid_type_error: "Consultation minutes required" })
+    .int("Must be a whole number")
+    .min(1, "At least 1 minute")
+    .max(120, "Keep under 120 minutes"),
+  weekly: z.array(scheduleDaySchema).length(7, "All 7 days are required"),
+});
+
 export { z };
