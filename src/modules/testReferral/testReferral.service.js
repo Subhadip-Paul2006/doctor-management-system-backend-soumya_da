@@ -16,8 +16,6 @@ import {
   getDiagnosticStaffByUserId,
 } from "./testReferral.repository.js";
 
-// Resolves who is creating this referral and what referringClinicId (if any) applies.
-// Doctor -> their primary clinic. Receptionist -> their clinic. Clinic -> itself.
 const resolveCreatorContext = async (user) => {
   if (user.role === "DOCTOR") {
     const doctor = await getDoctorByUserId(user.id);
@@ -61,6 +59,9 @@ export const createTestReferral = async (user, { patientId, appointmentId, diagn
     createdByRole,
   });
 
+  const patientDisplayName = patient.name || "A patient";
+
+  // Notify the patient
   if (patient.userId) {
     await notifyUser({
       userId: patient.userId,
@@ -71,6 +72,15 @@ export const createTestReferral = async (user, { patientId, appointmentId, diagn
     });
   }
 
+  // Notify the diagnostic center itself — this was missing before
+  await notifyUser({
+    userId: center.userId,
+    type: "GENERAL",
+    title: "New Test Referral Received",
+    message: `${patientDisplayName} has been referred to you for: ${testNames.join(", ")}.`,
+    meta: { referralId: referral.id, patientId, testNames, createdByRole },
+  });
+
   return referral;
 };
 
@@ -80,7 +90,6 @@ export const getMyReferralsAsPatient = async (userId, { page, limit }) => {
   return findReferralsForPatient({ patientId: patient.id, page, limit });
 };
 
-// For Diagnostic Center (owner) or its staff
 export const getIncomingReferrals = async (user, { page, limit }) => {
   let diagnosticCenterId;
 
@@ -100,7 +109,6 @@ export const getIncomingReferrals = async (user, { page, limit }) => {
   return findReferralsForDiagnosticCenter({ diagnosticCenterId, page, limit });
 };
 
-// For the referring Clinic — see referrals its Doctors/Receptionists have sent out
 export const getSentReferrals = async (clinicUserId, { page, limit }) => {
   const clinic = await getClinicByUserId(clinicUserId);
   if (!clinic) throw new ApiError(404, "Clinic profile not found");

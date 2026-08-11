@@ -1,12 +1,19 @@
 import prisma from "../../config/db.config.js";
 
+const patientSelect = {
+  name: true,
+  address: true,
+  user: { select: { name: true, phone: true, email: true } },
+  phone: true,
+};
+
 export const createReferral = (data) => {
   return prisma.testReferral.create({
     data,
     include: {
-      patient: { select: { name: true, user: { select: { name: true, phone: true } } } },
+      patient: { select: patientSelect },
       referringClinic: { select: { clinicName: true } },
-      diagnosticCenter: { select: { centerName: true } },
+      diagnosticCenter: { select: { centerName: true, userId: true } },
     },
   });
 };
@@ -15,7 +22,7 @@ export const findReferralById = (id) => {
   return prisma.testReferral.findUnique({
     where: { id },
     include: {
-      patient: { select: { userId: true, name: true, user: { select: { name: true, phone: true } } } },
+      patient: { select: { userId: true, ...patientSelect } },
     },
   });
 };
@@ -37,7 +44,7 @@ export const findReferralsForDiagnosticCenter = ({ diagnosticCenterId, page, lim
   return prisma.testReferral.findMany({
     where: { diagnosticCenterId },
     include: {
-      patient: { select: { name: true, user: { select: { name: true, phone: true } } } },
+      patient: { select: patientSelect },
       referringClinic: { select: { clinicName: true } },
     },
     orderBy: { createdAt: "desc" },
@@ -50,7 +57,7 @@ export const findReferralsForClinic = ({ clinicId, page, limit }) => {
   return prisma.testReferral.findMany({
     where: { referringClinicId: clinicId },
     include: {
-      patient: { select: { name: true, user: { select: { name: true, phone: true } } } },
+      patient: { select: patientSelect },
       diagnosticCenter: { select: { centerName: true } },
     },
     orderBy: { createdAt: "desc" },
@@ -62,7 +69,7 @@ export const findReferralsForClinic = ({ clinicId, page, limit }) => {
 export const findAllReferrals = ({ page, limit }) => {
   return prisma.testReferral.findMany({
     include: {
-      patient: { select: { name: true, user: { select: { name: true, phone: true } } } },
+      patient: { select: patientSelect },
       referringClinic: { select: { clinicName: true } },
       diagnosticCenter: { select: { centerName: true } },
     },

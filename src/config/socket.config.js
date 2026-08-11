@@ -33,6 +33,17 @@ export const initSocket = (httpServer, corsOrigin) => {
       socket.leave(`appointment:${appointmentId}`);
     });
 
+    // Personal notification channel — client joins their own room to receive
+    // live pushes for every notifyUser() call anywhere in the app
+    socket.on("joinUser", (userId) => {
+      socket.join(`user:${userId}`);
+      logger.info(`Socket ${socket.id} joined user:${userId}`);
+    });
+
+    socket.on("leaveUser", (userId) => {
+      socket.leave(`user:${userId}`);
+    });
+
     socket.on("disconnect", () => {
       logger.info(`🔌 Socket disconnected: ${socket.id}`);
     });
