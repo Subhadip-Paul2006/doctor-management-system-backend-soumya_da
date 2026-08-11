@@ -21,3 +21,5 @@ export { Toast } from "./components/Toast";
 export { Spinner } from "./components/Spinner";
 export { Skeleton, SkeletonText } from "./components/Skeleton";
 export { EmptyState } from "./components/EmptyState";
+export { Breadcrumbs } from "./components/Breadcrumbs";
+export { PageHeader } from "./components/PageHeader";
