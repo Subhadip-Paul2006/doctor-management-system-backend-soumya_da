@@ -37,6 +37,8 @@ import notificationRoutes from "./modules/notification/notification.routes.js";
 import diagnosticCenterRoutes from "./modules/diagnosticCenter/diagnosticCenter.routes.js";
 import testReferralRoutes from "./modules/testReferral/testReferral.routes.js";
 
+import analyticsRoutes from "./modules/analytics/analytics.routes.js";
+
 const app = express();
 
 app.use(helmet({ contentSecurityPolicy: false }));
@@ -87,6 +89,8 @@ app.use("/api/v1/notifications", notificationRoutes);
 app.use("/api/v1/diagnostic-centers", diagnosticCenterRoutes);
 
 app.use("/api/v1/test-referrals", testReferralRoutes);
+
+app.use("/api/v1/analytics", analyticsRoutes);
 
 if (env.NODE_ENV == "development") {
   app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));

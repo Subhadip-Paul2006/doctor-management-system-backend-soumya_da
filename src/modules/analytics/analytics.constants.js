@@ -1,0 +1,1 @@
+export const GRANULARITIES = ["daily", "weekly", "monthly", "yearly"];
