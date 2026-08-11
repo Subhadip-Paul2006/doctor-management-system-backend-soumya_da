@@ -2,6 +2,14 @@ import { cx } from "./_cx";
 import { Skeleton } from "./Skeleton";
 import { EmptyState } from "./EmptyState";
 
+/**
+ * @param {Object} props
+ * @param {{key: string, header: React.ReactNode, render?: (row: any) => React.ReactNode}[]} props.columns
+ * @param {any[]} [props.data]
+ * @param {boolean} [props.loading]
+ * @param {React.ReactNode} [props.empty]
+ * @param {string} [props.className]
+ */
 export function Table({ columns, data, loading = false, empty = null, className = "" }) {
   return (
     <div className={cx("overflow-x-auto rounded-lg border border-navy-200 bg-white", className)}>
