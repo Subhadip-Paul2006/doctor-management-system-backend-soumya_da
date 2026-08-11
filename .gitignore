@@ -4,4 +4,3 @@ logs/*
 !logs/.gitkeep
 dist
 .DS_Store
-.env.example
