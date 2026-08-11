@@ -128,12 +128,12 @@ export default function DesignSystemPage() {
           <h2 className="text-xl font-semibold text-navy-900 mb-3">Feedback & loading states</h2>
           <div className="space-y-4">
             <Alert variant="warning" title="Queue paused">Dr. Mukherjee is on a short break.</Alert>
-            <Alert variant="danger">Something went wrong loading today's queue.</Alert>
+            <Alert variant="danger">Something went wrong loading today&apos;s queue.</Alert>
             <div className="flex items-center gap-3 text-navy-500"><Spinner /> Loading appointments…</div>
             <SkeletonText lines={3} />
             <Card><EmptyState
               title="No Appointments Found"
-              description="You haven't booked any consultations yet."
+              description="You haven&apos;t booked any consultations yet."
               action={<Button size="sm">Search Doctors</Button>}
             /></Card>
           </div>
