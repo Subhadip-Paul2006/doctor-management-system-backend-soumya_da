@@ -16,6 +16,12 @@ const VARIANT_CLASSES = {
   neutral: "bg-navy-100 text-navy-700 border border-navy-200",
 };
 
+/**
+ * @param {Object} props
+ * @param {string} [props.variant]
+ * @param {string} [props.className]
+ * @param {React.ReactNode} [props.children]
+ */
 export function Badge({ variant = "neutral", className = "", children, ...props }) {
   return (
     <span
