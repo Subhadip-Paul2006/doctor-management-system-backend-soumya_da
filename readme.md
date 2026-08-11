@@ -174,6 +174,8 @@ Six roles share a single `User` table, with role-specific profile tables:
 - Full clinic patient list PDF (Name, Age, Phone) — Clinic and Receptionist
 - Doctor + clinic + exact-date-scoped patient list PDF (Name, Age, DOB, Phone) — includes all booking sources
 
+###  
+
 ---
 
 ## Folder Structure
@@ -310,11 +312,7 @@ Interactive Swagger UI at `/api-docs` — **only available when `NODE_ENV !== "p
 ## Known Limitations / Roadmap
 
 - **No automated test suite** — Jest/Supertest were planned but never implemented
-- **Time Slot queue mode** — schema field exists, booking logic isn't built; only LIVE and PRIVATE modes are functional
 - **Prescription and Pharmacy modules** — deliberately out of scope for this version
-- **Dashboard data for secondary clinics** — a doctor's Doctor/Clinic dashboard only reflects real appointment data for their *primary* clinic
-- **Patient Growth & Analytics** (trend graphs, growth-rate %, new-vs-returning patient classification) and **Daily Patient Dashboard** — requested by the client, not yet built
-- No device push notifications (FCM/APNs) — real-time signals are Socket.io (live, requires an open connection) plus a persisted in-app notification inbox; no notifications reach a closed app
 - A few empty leftover module folders/files exist as scaffolding from early planning — harmless
 
 ---
