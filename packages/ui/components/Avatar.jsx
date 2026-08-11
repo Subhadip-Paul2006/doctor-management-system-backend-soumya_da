@@ -13,6 +13,14 @@ function initials(name = "") {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
+/**
+ * @param {Object} props
+ * @param {string} [props.src]
+ * @param {string} [props.alt]
+ * @param {string} [props.name]
+ * @param {"sm"|"md"|"lg"} [props.size]
+ * @param {string} [props.className]
+ */
 export function Avatar({ src, alt = "", name, size = "md", className = "" }) {
   const sizeClasses = SIZE_CLASSES[size] || SIZE_CLASSES.md;
   if (src) {
