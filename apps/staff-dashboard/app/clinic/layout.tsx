@@ -1,7 +1,9 @@
+import { StaffShell } from "../_components/StaffShell";
+
 export default function ClinicLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <div className="clinic-layout">{children}</div>;
+  return <StaffShell role="clinic">{children}</StaffShell>;
 }
