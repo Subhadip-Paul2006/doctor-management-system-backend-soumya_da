@@ -3,6 +3,14 @@
 import { useId, useState } from "react";
 import { cx } from "./_cx";
 
+/**
+ * @param {Object} props
+ * @param {{value: string, label: React.ReactNode, content?: React.ReactNode}[]} props.tabs
+ * @param {string} [props.defaultValue]
+ * @param {string} [props.value]
+ * @param {(v: string) => void} [props.onChange]
+ * @param {string} [props.className]
+ */
 export function Tabs({ tabs, defaultValue, value, onChange, className = "" }) {
   const [internal, setInternal] = useState(defaultValue ?? tabs?.[0]?.value);
   const active = value !== undefined ? value : internal;
