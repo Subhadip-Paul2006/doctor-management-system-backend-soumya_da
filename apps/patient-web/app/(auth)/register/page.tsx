@@ -1,3 +1,5 @@
+import RegisterForm from "../../_components/RegisterForm";
+
 export default function PatientRegisterPage() {
-  return <div>Patient Registration Page</div>;
+  return <RegisterForm />;
 }
