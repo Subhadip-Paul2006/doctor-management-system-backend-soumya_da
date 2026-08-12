@@ -57,3 +57,8 @@ export const createDiagnosticCenterSchema = z.object({
   state: z.string().optional(),
   pincode: z.string().optional(),
 });
+
+export const setFeaturedDoctorSchema = z.object({
+  isFeatured: z.boolean(),
+  featuredOrder: z.number().int().nonnegative().optional(),
+});

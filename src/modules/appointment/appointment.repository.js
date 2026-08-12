@@ -38,6 +38,7 @@ export const searchDoctors = async ({ q, doctorName, clinicName, clinicId, city,
       user: { select: { name: true } },
       clinic: { select: { id: true, clinicName: true, city: true, address: true } },
     },
+    orderBy: [{ isFeatured: "desc" }, { featuredOrder: "asc" }],
   });
 
   if (date) {
@@ -201,3 +202,4 @@ export const getDoctorLeaveForDate = (doctorId, clinicId, date) => {
     where: { doctorId_clinicId_date: { doctorId, clinicId, date: new Date(date) } },
   });
 };
+

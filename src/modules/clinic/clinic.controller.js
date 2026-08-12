@@ -134,3 +134,8 @@ export const toggleOnlineConsultation = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(true, `Online consultation ${enabled ? "enabled" : "disabled"}`, { clinic }));
 });
+
+export const getMyReceivedRequests = asyncHandler(async (req, res) => {
+  const requests = await clinicService.getMyReceivedRequests(req.user.id);
+  res.status(200).json(new ApiResponse(true, "Received requests fetched", { requests }));
+});

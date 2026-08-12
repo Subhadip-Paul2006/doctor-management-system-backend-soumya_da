@@ -356,4 +356,6 @@ router.get("/holidays", clinicController.listHolidays);
  */
 router.patch("/online-consultation", clinicController.toggleOnlineConsultation);
 
+router.get("/requests/received", clinicController.getMyReceivedRequests);
+
 export default router;

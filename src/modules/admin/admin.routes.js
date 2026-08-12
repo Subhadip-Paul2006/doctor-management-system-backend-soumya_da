@@ -237,4 +237,42 @@ router.get("/diagnostic-centers", adminController.listDiagnosticCenters);
 router.patch("/diagnostic-centers/:centerId/approve", adminController.approveDiagnosticCenter);
 router.patch("/diagnostic-centers/:centerId/revoke", adminController.revokeDiagnosticCenter);
 
+/**
+ * @swagger
+ * /admin/doctors/{doctorId}/featured:
+ *   patch:
+ *     summary: (Admin/Super Admin) Mark a doctor as featured (or remove featured status)
+ *     tags: [Admin]
+ *     parameters:
+ *       - in: path
+ *         name: doctorId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [isFeatured]
+ *             properties:
+ *               isFeatured: { type: boolean }
+ *               featuredOrder: { type: integer, example: 1, description: "Lower shows first among featured doctors" }
+ *     responses:
+ *       200: { description: Doctor featured status updated }
+ *       404: { description: Doctor not found }
+ */
+router.patch("/doctors/:doctorId/featured", adminController.setFeaturedDoctor);
+
+/**
+ * @swagger
+ * /admin/doctors/featured:
+ *   get:
+ *     summary: List all currently featured doctors, in display order
+ *     tags: [Admin]
+ *     responses:
+ *       200: { description: Featured doctors fetched }
+ */
+router.get("/doctors/featured", adminController.listFeaturedDoctors);
+
 export default router;

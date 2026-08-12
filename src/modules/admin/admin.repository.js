@@ -129,3 +129,24 @@ export const findDiagnosticCenterByIdRaw = (id) => {
 export const setDiagnosticCenterApproval = (id, isApproved) => {
   return prisma.diagnosticCenter.update({ where: { id }, data: { isApproved } });
 };
+
+export const setDoctorFeatured = (doctorId, isFeatured, featuredOrder) => {
+  return prisma.doctor.update({
+    where: { id: doctorId },
+    data: {
+      isFeatured,
+      featuredOrder: featuredOrder ?? (isFeatured ? 0 : 0),
+    },
+  });
+};
+
+export const findFeaturedDoctors = () => {
+  return prisma.doctor.findMany({
+    where: { isFeatured: true },
+    include: {
+      user: { select: { name: true } },
+      clinic: { select: { clinicName: true, city: true } },
+    },
+    orderBy: { featuredOrder: "asc" },
+  });
+};

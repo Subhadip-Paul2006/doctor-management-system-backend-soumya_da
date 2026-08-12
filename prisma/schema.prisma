@@ -8,6 +8,402 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+model User {
+  id                    String                 @id @default(uuid())
+  name                  String
+  email                 String?                @unique
+  password              String?
+  phone                 String?                @unique
+  role                  Role
+  provider              AuthProvider           @default(LOCAL)
+  googleId              String?                @unique
+  avatar                String?
+  isVerified            Boolean                @default(false)
+  isActive              Boolean                @default(true)
+  refreshToken          String?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  selfRegistered        Boolean                @default(true)
+  clinic                Clinic?
+  diagnosticCenterStaff DiagnosticCenterStaff?
+  diagnosticCenter      DiagnosticCenter?
+  doctor                Doctor?
+  notifications         Notification[]
+  patient               Patient?
+  receptionist          Receptionist?
+
+  @@map("users")
+}
+
+model Clinic {
+  id                          String                    @id @default(uuid())
+  userId                      String                    @unique
+  clinicName                  String
+  address                     String?
+  city                        String?
+  state                       String?
+  pincode                     String?
+  isApproved                  Boolean                   @default(false)
+  createdAt                   DateTime                  @default(now())
+  updatedAt                   DateTime                  @updatedAt
+  latitude                    Float?
+  longitude                   Float?
+  logo                        String?
+  onlineConsultationEnabled   Boolean                   @default(true)
+  announcements               Announcement[]
+  appointments                Appointment[]
+  holidays                    ClinicHoliday[]
+  workingHours                ClinicWorkingHours[]
+  user                        User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  doctorAssociations          DoctorClinicAssociation[]
+  doctorLeaves                DoctorLeave[]
+  doctors                     Doctor[]
+  queues                      Queue[]
+  receptionistDoctors         ReceptionistDoctor[]
+  receptionists               Receptionist[]
+  reviews                     Review[]
+  referredTestRecommendations TestRecommendation[]      @relation("ReferringClinic")
+  targetedTestRecommendations TestRecommendation[]      @relation("TargetClinic")
+  testReferrals               TestReferral[]
+
+  @@map("clinics")
+}
+
+model Doctor {
+  id                     String                    @id @default(uuid())
+  userId                 String                    @unique
+  clinicId               String
+  specialization         String?
+  qualification          String?
+  experience             Int?
+  fee                    Float?
+  isVerified             Boolean                   @default(false)
+  createdAt              DateTime                  @default(now())
+  updatedAt              DateTime                  @updatedAt
+  queueMode              QueueMode                 @default(LIVE)
+  startTime              String?
+  profilePhoto           String?
+  avgConsultationMinutes Int?
+  featuredOrder          Int                       @default(0)
+  isFeatured             Boolean                   @default(false)
+  announcements          Announcement[]
+  appointments           Appointment[]
+  clinicAssociations     DoctorClinicAssociation[]
+  leaves                 DoctorLeave[]
+  clinic                 Clinic                    @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  user                   User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  queues                 Queue[]
+  assignedReceptionists  ReceptionistDoctor[]
+  reviews                Review[]
+
+  @@index([isFeatured, featuredOrder])
+  @@map("doctors")
+}
+
+model Receptionist {
+  id              String               @id @default(uuid())
+  userId          String               @unique
+  clinicId        String
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  assignedDoctors ReceptionistDoctor[]
+  clinic          Clinic               @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  user            User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("receptionists")
+}
+
+model ReceptionistDoctor {
+  id             String       @id @default(uuid())
+  receptionistId String
+  doctorId       String
+  createdAt      DateTime     @default(now())
+  clinicId       String
+  clinic         Clinic       @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  doctor         Doctor       @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  receptionist   Receptionist @relation(fields: [receptionistId], references: [id], onDelete: Cascade)
+
+  @@unique([receptionistId, doctorId, clinicId])
+  @@map("receptionist_doctors")
+}
+
+model Patient {
+  id                  String               @id @default(uuid())
+  userId              String?              @unique
+  dob                 DateTime?
+  gender              String?
+  address             String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  age                 Int?
+  bloodGroup          String?
+  latitude            Float?
+  longitude           Float?
+  name                String?
+  phone               String?
+  appointments        Appointment[]
+  user                User?                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviews             Review[]
+  testRecommendations TestRecommendation[]
+  testReferrals       TestReferral[]
+
+  @@map("patients")
+}
+
+model Queue {
+  id              String        @id @default(uuid())
+  doctorId        String
+  date            DateTime      @db.Date
+  currentToken    Int           @default(0)
+  lastTokenIssued Int           @default(0)
+  status          QueueStatus   @default(OPEN)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  clinicId        String
+  appointments    Appointment[]
+  logs            QueueLog[]
+  clinic          Clinic        @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  doctor          Doctor        @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@unique([doctorId, clinicId, date])
+  @@map("queues")
+}
+
+model QueueLog {
+  id          String   @id @default(uuid())
+  queueId     String
+  action      String
+  performedBy String
+  meta        Json?
+  createdAt   DateTime @default(now())
+  queue       Queue    @relation(fields: [queueId], references: [id], onDelete: Cascade)
+
+  @@map("queue_logs")
+}
+
+model Appointment {
+  id                  String               @id @default(uuid())
+  doctorId            String
+  patientId           String
+  queueId             String
+  token               Int
+  date                DateTime             @db.Date
+  status              AppointmentStatus    @default(WAITING)
+  bookingSource       BookingSource
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  isEmergency         Boolean              @default(false)
+  clinicId            String
+  cancelReason        String?
+  cancelledBy         String?
+  clinic              Clinic               @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  doctor              Doctor               @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  patient             Patient              @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  queue               Queue                @relation(fields: [queueId], references: [id], onDelete: Cascade)
+  review              Review?
+  testRecommendations TestRecommendation[]
+  testReferrals       TestReferral[]
+
+  @@unique([doctorId, clinicId, date, token])
+  @@map("appointments")
+}
+
+model PlatformSetting {
+  id                   String   @id @default(uuid())
+  bookingWindowMinutes Int      @default(180)
+  updatedAt            DateTime @updatedAt
+
+  @@map("platform_settings")
+}
+
+model Announcement {
+  id              String           @id @default(uuid())
+  type            AnnouncementType
+  title           String
+  message         String
+  clinicId        String?
+  doctorId        String?
+  createdByUserId String
+  isActive        Boolean          @default(true)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  clinic          Clinic?          @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  doctor          Doctor?          @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@map("announcements")
+}
+
+model DoctorClinicAssociation {
+  id          String        @id @default(uuid())
+  doctorId    String
+  clinicId    String
+  fee         Float?
+  queueMode   QueueMode     @default(LIVE)
+  dayOfWeek   DayOfWeek
+  startTime   String
+  endTime     String
+  status      RequestStatus @default(PENDING)
+  requestedBy RequestedBy
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  clinic      Clinic        @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  doctor      Doctor        @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@map("doctor_clinic_associations")
+}
+
+model ClinicWorkingHours {
+  id                     String    @id @default(uuid())
+  clinicId               String
+  dayOfWeek              DayOfWeek
+  openTime               String?
+  closeTime              String?
+  isClosed               Boolean   @default(false)
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+  avgConsultationMinutes Int?
+  clinic                 Clinic    @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@unique([clinicId, dayOfWeek])
+  @@map("clinic_working_hours")
+}
+
+model ClinicHoliday {
+  id        String   @id @default(uuid())
+  clinicId  String
+  date      DateTime @db.Date
+  reason    String?
+  createdAt DateTime @default(now())
+  clinic    Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@unique([clinicId, date])
+  @@map("clinic_holidays")
+}
+
+model Review {
+  id            String       @id @default(uuid())
+  appointmentId String       @unique
+  patientId     String
+  doctorId      String
+  clinicId      String
+  rating        Int
+  comment       String?
+  status        ReviewStatus @default(PENDING)
+  isReported    Boolean      @default(false)
+  reportReason  String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  appointment   Appointment  @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  clinic        Clinic       @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  doctor        Doctor       @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  patient       Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@map("reviews")
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  type      NotificationType @default(GENERAL)
+  title     String
+  message   String
+  isRead    Boolean          @default(false)
+  meta      Json?
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+model DoctorLeave {
+  id        String   @id @default(uuid())
+  doctorId  String
+  clinicId  String
+  date      DateTime @db.Date
+  reason    String?
+  createdAt DateTime @default(now())
+  clinic    Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  doctor    Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@unique([doctorId, clinicId, date])
+  @@map("doctor_leaves")
+}
+
+model TestRecommendation {
+  id                String       @id @default(uuid())
+  patientId         String
+  appointmentId     String?
+  testName          String
+  notes             String?
+  referringClinicId String?
+  targetClinicId    String?
+  targetCenterName  String?
+  createdByUserId   String
+  createdByRole     Role
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  appointment       Appointment? @relation(fields: [appointmentId], references: [id])
+  patient           Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  referringClinic   Clinic?      @relation("ReferringClinic", fields: [referringClinicId], references: [id])
+  targetClinic      Clinic?      @relation("TargetClinic", fields: [targetClinicId], references: [id])
+
+  @@map("test_recommendations")
+}
+
+model DiagnosticCenter {
+  id                String                  @id @default(uuid())
+  userId            String                  @unique
+  centerName        String
+  address           String?
+  city              String?
+  state             String?
+  pincode           String?
+  latitude          Float?
+  longitude         Float?
+  logo              String?
+  isApproved        Boolean                 @default(false)
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  staff             DiagnosticCenterStaff[]
+  user              User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  incomingReferrals TestReferral[]
+
+  @@map("diagnostic_centers")
+}
+
+model DiagnosticCenterStaff {
+  id                 String           @id @default(uuid())
+  userId             String           @unique
+  diagnosticCenterId String
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  diagnosticCenter   DiagnosticCenter @relation(fields: [diagnosticCenterId], references: [id], onDelete: Cascade)
+  user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("diagnostic_center_staff")
+}
+
+model TestReferral {
+  id                 String           @id @default(uuid())
+  patientId          String
+  appointmentId      String?
+  testNames          String[]
+  notes              String?
+  referringClinicId  String?
+  diagnosticCenterId String
+  createdByUserId    String
+  createdByRole      Role
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  appointment        Appointment?     @relation(fields: [appointmentId], references: [id])
+  diagnosticCenter   DiagnosticCenter @relation(fields: [diagnosticCenterId], references: [id], onDelete: Cascade)
+  patient            Patient          @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  referringClinic    Clinic?          @relation(fields: [referringClinicId], references: [id])
+
+  @@map("test_referrals")
+}
+
 enum Role {
   SUPER_ADMIN
   ADMIN
@@ -74,235 +470,6 @@ enum DayOfWeek {
   SUNDAY
 }
 
-
-model User {
-  id             String       @id @default(uuid())
-  name           String
-  email          String?      @unique
-  password       String?
-  phone          String?      @unique
-  role           Role
-  provider       AuthProvider @default(LOCAL)
-  googleId       String?      @unique
-  avatar         String?
-  isVerified     Boolean      @default(false)
-  isActive       Boolean      @default(true)
-  refreshToken   String?
-  selfRegistered Boolean      @default(true)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  clinic       Clinic?
-  doctor       Doctor?
-  receptionist Receptionist?
-  patient      Patient?
-  diagnosticCenter      DiagnosticCenter?
-  diagnosticCenterStaff DiagnosticCenterStaff?
-  notifications Notification[]
-
-  @@map("users")
-}
-
-model Clinic {
-  id         String   @id @default(uuid())
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId     String   @unique
-  clinicName String
-  address    String?
-  city       String?
-  state      String?
-  pincode    String?
-  latitude   Float?
-  longitude  Float?
-  logo       String?
-  isApproved Boolean  @default(false)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  onlineConsultationEnabled Boolean @default(true)
-
-  doctors             Doctor[]
-  receptionists       Receptionist[]
-  announcements       Announcement[]
-  doctorAssociations  DoctorClinicAssociation[]
-  queues              Queue[]
-  appointments        Appointment[]
-  workingHours ClinicWorkingHours[]
-  holidays     ClinicHoliday[]
-  receptionistDoctors ReceptionistDoctor[]
-  reviews             Review[]
-  doctorLeaves        DoctorLeave[]
-  referredTestRecommendations TestRecommendation[] @relation("ReferringClinic")
-  targetedTestRecommendations TestRecommendation[] @relation("TargetClinic")
-  testReferrals TestReferral[]
-
-  @@map("clinics")
-}
-
-model Doctor {
-  id             String    @id @default(uuid())
-  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId         String    @unique
-  clinic         Clinic    @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  clinicId       String
-  specialization String?
-  qualification  String?
-  experience     Int?
-  fee            Float?
-  isVerified     Boolean   @default(false)
-  queueMode      QueueMode @default(LIVE)
-  startTime      String?
-  profilePhoto   String?
-  avgConsultationMinutes Int? // used to estimate patient wait time
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  assignedReceptionists ReceptionistDoctor[]
-  queues                Queue[]
-  appointments          Appointment[]
-  announcements         Announcement[]
-  clinicAssociations    DoctorClinicAssociation[]
-  reviews               Review[]
-  leaves                DoctorLeave[]
-
-  @@map("doctors")
-}
-
-model Receptionist {
-  id       String @id @default(uuid())
-  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId   String @unique
-  clinic   Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  clinicId String
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  assignedDoctors ReceptionistDoctor[]
-
-  @@map("receptionists")
-}
-
-model ReceptionistDoctor {
-  id             String       @id @default(uuid())
-  receptionist   Receptionist @relation(fields: [receptionistId], references: [id], onDelete: Cascade)
-  receptionistId String
-  doctor         Doctor       @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  doctorId       String
-  clinic         Clinic       @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  clinicId       String
-
-  createdAt DateTime @default(now())
-
-  @@unique([receptionistId, doctorId, clinicId])
-  @@map("receptionist_doctors")
-}
-
-model Patient {
-  id     String  @id @default(uuid())
-  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId String? @unique
-
-  // For guest/walk-in patients who have no login account —
-  // these hold the identity directly on the Patient record.
-  // For self-registered patients, name/phone live on the linked User instead.
-  name  String?
-  phone String?
-
-  dob        DateTime?
-  age        Int?
-  gender     String?
-  bloodGroup String?
-  address    String?
-  latitude   Float?
-  longitude  Float?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  appointments Appointment[]
-  reviews      Review[]
-  testRecommendations TestRecommendation[]
-  testReferrals TestReferral[]
-
-  @@map("patients")
-}
-
-model Queue {
-  id              String      @id @default(uuid())
-  doctor          Doctor      @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  doctorId        String
-  clinic          Clinic      @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  clinicId        String
-  date            DateTime    @db.Date
-  currentToken    Int         @default(0)
-  lastTokenIssued Int         @default(0)
-  status          QueueStatus @default(OPEN)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  appointments Appointment[]
-  logs         QueueLog[]
-
-  @@unique([doctorId, clinicId, date])
-  @@map("queues")
-}
-
-model QueueLog {
-  id          String   @id @default(uuid())
-  queue       Queue    @relation(fields: [queueId], references: [id], onDelete: Cascade)
-  queueId     String
-  action      String
-  performedBy String
-  meta        Json?
-
-  createdAt DateTime @default(now())
-
-  @@map("queue_logs")
-}
-
-model Appointment {
-  id            String            @id @default(uuid())
-  doctor        Doctor            @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  doctorId      String
-  clinic        Clinic            @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  clinicId      String
-  patient       Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  patientId     String
-  queue         Queue             @relation(fields: [queueId], references: [id], onDelete: Cascade)
-  queueId       String
-  token         Int
-  date          DateTime          @db.Date
-  status        AppointmentStatus @default(WAITING)
-  bookingSource BookingSource
-  isEmergency   Boolean           @default(false)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  review Review?
-  cancelReason      String?
-  cancelledBy       String? // userId of whoever cancelled it
-  testRecommendations TestRecommendation[]
-  testReferrals TestReferral[]
-
-  @@unique([doctorId, clinicId, date, token])
-  @@map("appointments")
-}
-
-// Singleton table — always exactly one row — holds platform-wide configurable settings
-model PlatformSetting {
-  id                   String @id @default(uuid())
-  bookingWindowMinutes Int    @default(180)
-
-  updatedAt DateTime @updatedAt
-
-  @@map("platform_settings")
-}
-
 enum AnnouncementType {
   DOCTOR_ABSENT
   CLINIC_CLOSED
@@ -312,111 +479,12 @@ enum AnnouncementType {
   GENERAL
 }
 
-model Announcement {
-  id        String           @id @default(uuid())
-  type      AnnouncementType
-  title     String
-  message   String
-
-  // null clinicId = platform-wide (posted by Admin/Super Admin)
-  clinic   Clinic? @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  clinicId String?
-
-  // optional — ties the notice to one specific doctor (e.g. "Dr. X absent today")
-  doctor   Doctor? @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  doctorId String?
-
-  createdByUserId String
-  isActive        Boolean @default(true)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("announcements")
-}
-
-model DoctorClinicAssociation {
-  id       String @id @default(uuid())
-  doctor   Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  doctorId String
-  clinic   Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  clinicId String
-
-  fee       Float?
-  queueMode QueueMode @default(LIVE)
-
-  dayOfWeek DayOfWeek
-  startTime String // "HH:mm"
-  endTime   String // "HH:mm"
-
-  status      RequestStatus @default(PENDING)
-  requestedBy RequestedBy
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("doctor_clinic_associations")
-}
-
-model ClinicWorkingHours {
-  id       String    @id @default(uuid())
-  clinic   Clinic    @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  clinicId String
-  dayOfWeek DayOfWeek
-  openTime  String? // "HH:mm" — null if closed that day
-  closeTime String? // "HH:mm"
-  isClosed  Boolean @default(false)
-  avgConsultationMinutes Int?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([clinicId, dayOfWeek])
-  @@map("clinic_working_hours")
-}
-
-model ClinicHoliday {
-  id       String   @id @default(uuid())
-  clinic   Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  clinicId String
-  date     DateTime @db.Date
-  reason   String?
-
-  createdAt DateTime @default(now())
-
-  @@unique([clinicId, date])
-  @@map("clinic_holidays")
-}
-
 enum ReviewStatus {
   PENDING
   APPROVED
   REJECTED
 }
 
-model Review {
-  id            String       @id @default(uuid())
-  appointment   Appointment  @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
-  appointmentId String       @unique
-  patient       Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  patientId     String
-  doctor        Doctor       @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  doctorId      String
-  clinic        Clinic       @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  clinicId      String
-
-  rating  Int
-  comment String?
-  status  ReviewStatus @default(PENDING)
-
-  isReported   Boolean @default(false)
-  reportReason String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("reviews")
-}
 enum NotificationType {
   APPOINTMENT_BOOKED
   APPOINTMENT_CANCELLED
@@ -426,122 +494,4 @@ enum NotificationType {
   CONNECTION_REQUEST_RECEIVED
   CONNECTION_REQUEST_RESPONDED
   GENERAL
-}
-
-model Notification {
-  id        String           @id @default(uuid())
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    String
-  type      NotificationType @default(GENERAL)
-  title     String
-  message   String
-  isRead    Boolean          @default(false)
-  meta      Json?
-
-  createdAt DateTime @default(now())
-
-  @@index([userId, isRead])
-  @@map("notifications")
-}
-
-model DoctorLeave {
-  id       String @id @default(uuid())
-  doctor   Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  doctorId String
-  clinic   Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  clinicId String
-  date     DateTime @db.Date
-  reason   String?
-
-  createdAt DateTime @default(now())
-
-  @@unique([doctorId, clinicId, date])
-  @@map("doctor_leaves")
-}
-
-model TestRecommendation {
-  id            String       @id @default(uuid())
-  patient       Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  patientId     String
-  appointment   Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
-  appointmentId String?
-
-  testName String
-  notes    String?
-
-  referringClinic   Clinic? @relation("ReferringClinic", fields: [referringClinicId], references: [id], onDelete: SetNull)
-  referringClinicId String?
-
-  targetClinic     Clinic? @relation("TargetClinic", fields: [targetClinicId], references: [id], onDelete: SetNull)
-  targetClinicId   String?
-  targetCenterName String?
-
-  createdByUserId String
-  createdByRole   Role
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("test_recommendations")
-}
-
-model DiagnosticCenter {
-  id         String  @id @default(uuid())
-  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId     String  @unique
-  centerName String
-  address    String?
-  city       String?
-  state      String?
-  pincode    String?
-  latitude   Float?
-  longitude  Float?
-  logo       String?
-  isApproved Boolean @default(false)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  staff             DiagnosticCenterStaff[]
-  incomingReferrals TestReferral[]
-
-  @@map("diagnostic_centers")
-}
-
-model DiagnosticCenterStaff {
-  id                 String           @id @default(uuid())
-  user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId             String           @unique
-  diagnosticCenter   DiagnosticCenter @relation(fields: [diagnosticCenterId], references: [id], onDelete: Cascade)
-  diagnosticCenterId String
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("diagnostic_center_staff")
-}
-
-model TestReferral {
-  id            String       @id @default(uuid())
-  patient       Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  patientId     String
-  appointment   Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
-  appointmentId String?
-
-  testNames String[]
-  notes     String?
-
-  referringClinic   Clinic? @relation(fields: [referringClinicId], references: [id], onDelete: SetNull)
-  referringClinicId String?
-
-  diagnosticCenter   DiagnosticCenter @relation(fields: [diagnosticCenterId], references: [id], onDelete: Cascade)
-  diagnosticCenterId String
-
-  createdByUserId String
-  createdByRole   Role
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("test_referrals")
 }

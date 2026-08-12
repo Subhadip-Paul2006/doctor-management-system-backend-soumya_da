@@ -10,6 +10,7 @@ export const searchDoctorsByName = (name) => {
       user: { select: { name: true, email: true } },
       clinic: { select: { clinicName: true, city: true } },
     },
+    orderBy: [{ isFeatured: "desc" }, { featuredOrder: "asc" }],
   });
 };
 

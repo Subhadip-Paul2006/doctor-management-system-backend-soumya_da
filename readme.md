@@ -328,7 +328,8 @@ Deliberately deferred:
 - **Real payment gateway** — any future Billing module is planned as record-keeping only (mark paid/unpaid), not live payment processing
 - **Dashboard data for secondary clinics** — Doctor/Clinic dashboards only reflect real appointment data for a doctor's *primary* clinic
 - **Follow-up module, Staff Activity Log, automated reminders, data export** — scoped and planned, deprioritized for now
-- A leftover unused `TestRecommendation` model sits in the schema (superseded by `TestReferral`) — harmless, cleanup migration pending
+- A leftover unused `TestRecommendation` model sits in the schema (superseded by `TestReferral`) — harmless, cleanup migration pending,
+- Peak Hour, Avg Waiting Time, Follow-up not done
 
 ---
 

@@ -200,3 +200,14 @@ export const revokeDiagnosticCenterApproval = async (id) => {
   if (!center) throw new ApiError(404, "Diagnostic center not found");
   return setDiagnosticCenterApproval(id, false);
 };
+
+export const setDoctorFeaturedStatus = async (doctorId, isFeatured, featuredOrder) => {
+  const doctor = await findDoctorByIdRaw(doctorId);
+  if (!doctor) throw new ApiError(404, "Doctor not found");
+
+  return setDoctorFeatured(doctorId, isFeatured, featuredOrder);
+};
+
+export const listFeaturedDoctors = async () => {
+  return findFeaturedDoctors();
+};
