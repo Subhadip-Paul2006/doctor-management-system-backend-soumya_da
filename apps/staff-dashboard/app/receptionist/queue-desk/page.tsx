@@ -1,3 +1,5 @@
+import QueueDeskClient from "../../_components/QueueDeskClient";
+
 export default function QueueDeskPage() {
-  return <div>Receptionist Queue Desk Operation Page</div>;
+  return <QueueDeskClient />;
 }
