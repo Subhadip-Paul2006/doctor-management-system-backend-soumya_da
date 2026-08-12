@@ -30,7 +30,7 @@ const router = Router();
  *     responses:
  *       200: { description: Doctors fetched }
  */
-router.get("/doctors/search", authMiddleware, appointmentController.searchDoctors);
+router.get("/doctors/search", appointmentController.searchDoctors);
 
 /**
  * @swagger

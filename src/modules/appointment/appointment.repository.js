@@ -1,6 +1,6 @@
 import prisma from "../../config/db.config.js";
 
-export const searchDoctors = async ({ doctorName, clinicName, clinicId, city, date }) => {
+export const searchDoctors = async ({ q, doctorName, clinicName, clinicId, city, date }) => {
   const where = {
     isVerified: true,
     clinic: { isApproved: true },
@@ -17,6 +17,19 @@ export const searchDoctors = async ({ doctorName, clinicName, clinicId, city, da
   }
   if (city) {
     where.clinic = { ...where.clinic, city: { contains: city, mode: "insensitive" } };
+  }
+
+  // Single search-box mode: match doctor name, specialization, qualification,
+  // clinic name, city, or address — whichever field the text matches.
+  if (q) {
+    where.OR = [
+      { user: { name: { contains: q, mode: "insensitive" } } },
+      { specialization: { contains: q, mode: "insensitive" } },
+      { qualification: { contains: q, mode: "insensitive" } },
+      { clinic: { clinicName: { contains: q, mode: "insensitive" } } },
+      { clinic: { city: { contains: q, mode: "insensitive" } } },
+      { clinic: { address: { contains: q, mode: "insensitive" } } },
+    ];
   }
 
   const doctors = await prisma.doctor.findMany({

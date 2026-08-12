@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const searchDoctorsSchema = z.object({
+  q: z.string().optional(),
   doctorName: z.string().optional(),
   clinicName: z.string().optional(),
   clinicId: z.string().uuid().optional(),
