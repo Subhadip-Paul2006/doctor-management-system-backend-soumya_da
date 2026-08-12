@@ -44,12 +44,12 @@ The system supports **6 Backend Roles** mapped across two dedicated Next.js appl
 ### 2. `apps/staff-dashboard` (Staff Operations Portal)
 - **Roles**: `SUPER_ADMIN`, `ADMIN`, `CLINIC`, `DOCTOR`, `RECEPTIONIST`.
 - **Role-Gated Route Groups**:
-  - `(auth)`: Staff authentication portal.
+  - `(auth)`: Staff authentication portal & multi-role login.
   - `(super-admin)`: Global platform parameters, administrative account control.
   - `(admin)`: Clinic approvals, doctor verification, system-wide announcements.
   - `(clinic)`: Clinic profile, operating hours, holiday schedules, staff assignments.
   - `(doctor)`: Live queue management (`LIVE`, `PRIVATE`, `TIME_SLOT`), patient visit completion, e-prescription generation, consultation fees.
-  - `(receptionist)`: Front-desk live queue desk, walk-in token issuance, manual patient registration.
+  - `(receptionist)`: Front-desk live queue desk (`QueueDeskClient`), walk-in token issuance (`WalkInRegistration`), manual patient registration.
 
 ---
 
