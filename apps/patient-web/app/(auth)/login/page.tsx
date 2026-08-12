@@ -1,3 +1,5 @@
+import LoginForm from "../../_components/LoginForm";
+
 export default function PatientLoginPage() {
-  return <div>Patient Login Page</div>;
+  return <LoginForm />;
 }
