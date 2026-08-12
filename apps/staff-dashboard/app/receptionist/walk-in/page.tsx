@@ -1,5 +1,7 @@
-import WalkInRegistration from "../../_components/WalkInRegistration";
+import { WalkInRegistration } from "../../_components/WalkInRegistration";
+import { getFrontDeskContext } from "../../_data/receptionist";
 
 export default function WalkInBookingPage() {
-  return <WalkInRegistration />;
+  const { doctors } = getFrontDeskContext();
+  return <WalkInRegistration doctors={doctors} />;
 }

@@ -9,6 +9,7 @@ basics.md
 
 # Frontend & Monorepo
 .next/
+*.tsbuildinfo
 .turbo/
 dist/
 .env.local
