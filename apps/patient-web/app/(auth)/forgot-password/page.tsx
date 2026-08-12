@@ -1,3 +1,5 @@
-export default function ForgotPasswordPage() {
-  return <div>Forgot Password Page</div>;
+import ForgotPasswordForm from "../../_components/ForgotPasswordForm";
+
+export default function PatientForgotPasswordPage() {
+  return <ForgotPasswordForm />;
 }
