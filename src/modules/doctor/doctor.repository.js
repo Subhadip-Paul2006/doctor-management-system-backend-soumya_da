@@ -10,6 +10,7 @@ export const searchDoctorsByName = (name) => {
       user: { select: { name: true, email: true } },
       clinic: { select: { clinicName: true, city: true } },
     },
+    orderBy: [{ isFeatured: "desc" }, { featuredOrder: "asc" }],
   });
 };
 
@@ -95,5 +96,30 @@ export const updateAssociationAvgConsultation = (associationId, minutes) => {
   return prisma.doctorClinicAssociation.update({
     where: { id: associationId },
     data: { avgConsultationMinutes: minutes },
+  });
+};
+
+export const createDoctorLeave = (doctorId, clinicId, date, reason) => {
+  return prisma.doctorLeave.create({
+    data: { doctorId, clinicId, date: new Date(date), reason },
+  });
+};
+
+export const removeDoctorLeave = (doctorId, clinicId, date) => {
+  return prisma.doctorLeave.deleteMany({
+    where: { doctorId, clinicId, date: new Date(date) },
+  });
+};
+
+export const findLeaveForDate = (doctorId, clinicId, date) => {
+  return prisma.doctorLeave.findUnique({
+    where: { doctorId_clinicId_date: { doctorId, clinicId, date: new Date(date) } },
+  });
+};
+
+export const findUpcomingLeaves = (doctorId, clinicId) => {
+  return prisma.doctorLeave.findMany({
+    where: { doctorId, clinicId, date: { gte: new Date(new Date().toISOString().split("T")[0]) } },
+    orderBy: { date: "asc" },
   });
 };

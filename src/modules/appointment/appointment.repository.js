@@ -1,6 +1,6 @@
 import prisma from "../../config/db.config.js";
 
-export const searchDoctors = async ({ doctorName, clinicName, clinicId, city, date }) => {
+export const searchDoctors = async ({ q, doctorName, clinicName, clinicId, city, date }) => {
   const where = {
     isVerified: true,
     clinic: { isApproved: true },
@@ -19,12 +19,26 @@ export const searchDoctors = async ({ doctorName, clinicName, clinicId, city, da
     where.clinic = { ...where.clinic, city: { contains: city, mode: "insensitive" } };
   }
 
+  // Single search-box mode: match doctor name, specialization, qualification,
+  // clinic name, city, or address — whichever field the text matches.
+  if (q) {
+    where.OR = [
+      { user: { name: { contains: q, mode: "insensitive" } } },
+      { specialization: { contains: q, mode: "insensitive" } },
+      { qualification: { contains: q, mode: "insensitive" } },
+      { clinic: { clinicName: { contains: q, mode: "insensitive" } } },
+      { clinic: { city: { contains: q, mode: "insensitive" } } },
+      { clinic: { address: { contains: q, mode: "insensitive" } } },
+    ];
+  }
+
   const doctors = await prisma.doctor.findMany({
     where,
     include: {
       user: { select: { name: true } },
       clinic: { select: { id: true, clinicName: true, city: true, address: true } },
     },
+    orderBy: [{ isFeatured: "desc" }, { featuredOrder: "asc" }],
   });
 
   if (date) {
@@ -168,3 +182,24 @@ export const getConsultationMinutesForDoctorClinic = async (doctorId, clinicId) 
   });
   return association?.avgConsultationMinutes || null;
 };
+
+export const findAppointmentByIdFull = (id) => {
+  return prisma.appointment.findUnique({
+    where: { id },
+    include: { patient: true },
+  });
+};
+
+export const cancelAppointmentRecord = (id, { cancelReason, cancelledBy }) => {
+  return prisma.appointment.update({
+    where: { id },
+    data: { status: "CANCELLED", cancelReason, cancelledBy },
+  });
+};
+
+export const getDoctorLeaveForDate = (doctorId, clinicId, date) => {
+  return prisma.doctorLeave.findUnique({
+    where: { doctorId_clinicId_date: { doctorId, clinicId, date: new Date(date) } },
+  });
+};
+

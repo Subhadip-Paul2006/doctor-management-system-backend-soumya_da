@@ -16,3 +16,7 @@ export const emitAppointmentCompleted = (doctorId, clinicId, payload) => {
   const io = getIO();
   io.to(`queue:${doctorId}:${clinicId}`).emit("appointmentCompleted", payload);
 };
+export const emitDoctorDelay = (doctorId, clinicId, payload) => {
+  const io = getIO();
+  io.to(`queue:${doctorId}:${clinicId}`).emit("doctorDelay", payload);
+};

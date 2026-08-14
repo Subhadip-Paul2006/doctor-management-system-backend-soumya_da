@@ -26,9 +26,10 @@ import {
   findHolidays,
   findHolidayForDate,
   setOnlineConsultationEnabled,
-  getClinicById, getWorkingHoursForClinicDay, getHolidayForClinicDate
+  getClinicById, getWorkingHoursForClinicDay, getHolidayForClinicDate, 
+  findReceivedRequestsForClinic
 } from "./clinic.repository.js";
-import { findApprovedAssociationsForDoctor } from "../doctor/doctor.repository.js";
+import { findApprovedAssociationsForDoctor} from "../doctor/doctor.repository.js";
 
 export const getMyClinicProfile = async (userId) => {
   const clinic = await findClinicByUserId(userId);
@@ -234,4 +235,10 @@ export const toggleOnlineConsultation = async (clinicUserId, enabled) => {
   const clinic = await findClinicByUserId(clinicUserId);
   if (!clinic) throw new ApiError(404, "Clinic profile not found");
   return setOnlineConsultationEnabled(clinic.id, enabled);
+};
+
+export const getMyReceivedRequests = async (clinicUserId) => {
+  const clinic = await findClinicByUserId(clinicUserId);
+  if (!clinic) throw new ApiError(404, "Clinic profile not found");
+  return findReceivedRequestsForClinic(clinic.id);
 };

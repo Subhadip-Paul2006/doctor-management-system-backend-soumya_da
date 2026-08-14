@@ -13,7 +13,14 @@ import {
 import { generateReportPDF, generatePatientListPDF, generateDoctorPatientListPDF } from "../../utils/pdfGenerator.js";
 import { generateReportExcel } from "../../utils/excelGenerator.js";
 
-const sendReport = (res, report, format, filenameBase) => {
+// Turns a clinic name into a safe filename fragment: "City Health Center" -> "City_Health_Center"
+const sanitizeForFilename = (str) => {
+  return (str || "clinic").trim().replace(/[^a-zA-Z0-9]+/g, "_");
+};
+
+const sendReport = (res, report, format, filenameSuffix) => {
+  const filenameBase = `${sanitizeForFilename(report.clinicName)}_${filenameSuffix}`;
+
   if (format === "pdf") {
     return generateReportPDF(res, `${filenameBase}.pdf`, report);
   }
@@ -26,36 +33,38 @@ const sendReport = (res, report, format, filenameBase) => {
 export const getDailyReport = asyncHandler(async (req, res) => {
   const { date } = dailyReportSchema.parse(req.query);
   const report = await reportService.getDailyReport(req.user.id, date);
-  return sendReport(res, report, req.query.format, `daily-report-${date}`);
+  return sendReport(res, report, req.query.format, `daily-report_${date}`);
 });
 
 export const getMonthlyReport = asyncHandler(async (req, res) => {
   const { month } = monthlyReportSchema.parse(req.query);
   const report = await reportService.getMonthlyReport(req.user.id, month);
-  return sendReport(res, report, req.query.format, `monthly-report-${month}`);
+  return sendReport(res, report, req.query.format, `monthly-report_${month}`);
 });
 
 export const getWeeklyReport = asyncHandler(async (req, res) => {
   const { date } = weeklyReportSchema.parse(req.query);
   const report = await reportService.getWeeklyReport(req.user.id, date);
-  return sendReport(res, report, req.query.format, `weekly-report-${report.weekStart}-to-${report.weekEnd}`);
+  return sendReport(res, report, req.query.format, `weekly-report_${report.weekStart}_to_${report.weekEnd}`);
 });
 
 export const getYearlyReport = asyncHandler(async (req, res) => {
   const { year } = yearlyReportSchema.parse(req.query);
   const report = await reportService.getYearlyReport(req.user.id, year);
-  return sendReport(res, report, req.query.format, `yearly-report-${year}`);
+  return sendReport(res, report, req.query.format, `yearly-report_${year}`);
 });
 
 export const getCustomRangeReport = asyncHandler(async (req, res) => {
   const { startDate, endDate } = customRangeReportSchema.parse(req.query);
   const report = await reportService.getCustomRangeReport(req.user.id, startDate, endDate);
-  return sendReport(res, report, req.query.format, `report-${startDate}-to-${endDate}`);
+  return sendReport(res, report, req.query.format, `report_${startDate}_to_${endDate}`);
 });
 
 export const getPatientListPDF = asyncHandler(async (req, res) => {
   const { clinicName, patients } = await reportService.getPatientListReport(req.user.id, req.user.role);
-  generatePatientListPDF(res, "patient-list.pdf", clinicName, patients);
+  const today = new Date().toISOString().split("T")[0];
+  const filename = `${sanitizeForFilename(clinicName)}_patient-list_${today}.pdf`;
+  generatePatientListPDF(res, filename, clinicName, patients);
 });
 
 export const getDoctorPatientListPDF = asyncHandler(async (req, res) => {
@@ -82,12 +91,7 @@ export const getDoctorPatientListPDF = asyncHandler(async (req, res) => {
     date
   );
 
-  generateDoctorPatientListPDF(
-    res,
-    `patients-${doctor.user.name}-${date}.pdf`,
-    clinicName,
-    doctor.user.name,
-    date,
-    patients
-  );
+  const filename = `${sanitizeForFilename(clinicName)}_${sanitizeForFilename(doctor.user.name)}_${date}.pdf`;
+
+  generateDoctorPatientListPDF(res, filename, clinicName, doctor.user.name, date, patients);
 });

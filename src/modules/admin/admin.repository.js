@@ -96,3 +96,57 @@ export const createClinicUser = ({ userData, clinicName }) => {
     return { user, clinic };
   });
 };
+
+export const createDiagnosticCenterUser = ({ userData, centerName }) => {
+  return prisma.$transaction(async (tx) => {
+    const user = await tx.user.create({
+      data: { ...userData, role: "DIAGNOSTIC_CENTER", selfRegistered: false, isVerified: true },
+    });
+
+    const diagnosticCenter = await tx.diagnosticCenter.create({
+      data: { userId: user.id, centerName, isApproved: true },
+    });
+
+    return { user, diagnosticCenter };
+  });
+};
+
+export const findAllDiagnosticCenters = ({ isApproved, page = 1, limit = 20 }) => {
+  const where = typeof isApproved === "boolean" ? { isApproved } : {};
+  return prisma.diagnosticCenter.findMany({
+    where,
+    include: { user: { select: { name: true, email: true, phone: true, isActive: true } } },
+    skip: (page - 1) * limit,
+    take: limit,
+    orderBy: { createdAt: "desc" },
+  });
+};
+
+export const findDiagnosticCenterByIdRaw = (id) => {
+  return prisma.diagnosticCenter.findUnique({ where: { id } });
+};
+
+export const setDiagnosticCenterApproval = (id, isApproved) => {
+  return prisma.diagnosticCenter.update({ where: { id }, data: { isApproved } });
+};
+
+export const setDoctorFeatured = (doctorId, isFeatured, featuredOrder) => {
+  return prisma.doctor.update({
+    where: { id: doctorId },
+    data: {
+      isFeatured,
+      featuredOrder: featuredOrder ?? (isFeatured ? 0 : 0),
+    },
+  });
+};
+
+export const findFeaturedDoctors = () => {
+  return prisma.doctor.findMany({
+    where: { isFeatured: true },
+    include: {
+      user: { select: { name: true } },
+      clinic: { select: { clinicName: true, city: true } },
+    },
+    orderBy: { featuredOrder: "asc" },
+  });
+};

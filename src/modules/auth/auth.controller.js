@@ -42,7 +42,7 @@ export const login = asyncHandler(async (req, res) => {
 
   res
     .status(200)
-    .json(new ApiResponse(true, "Login successful", { user, accessToken }));
+    .json(new ApiResponse(true, "Login successful", { user, accessToken, refreshToken }));
 });
 
 export const refresh = asyncHandler(async (req, res) => {
@@ -55,7 +55,7 @@ export const refresh = asyncHandler(async (req, res) => {
 
   res
     .status(200)
-    .json(new ApiResponse(true, "Token refreshed successfully", { user, accessToken }));
+    .json(new ApiResponse(true, "Token refreshed successfully", { user, accessToken, refreshToken }));
 });
 
 export const logout = asyncHandler(async (req, res) => {

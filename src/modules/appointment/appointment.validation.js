@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const searchDoctorsSchema = z.object({
+  q: z.string().optional(),
   doctorName: z.string().optional(),
   clinicName: z.string().optional(),
   clinicId: z.string().uuid().optional(),
@@ -29,4 +30,12 @@ export const bookReceptionAppointmentSchema = z.object({
     .optional(),
 }).refine((data) => data.patientId || data.newPatient, {
   message: "Either patientId or newPatient details must be provided",
+});
+
+export const cancelAppointmentSchema = z.object({
+  reason: z.string().max(500).optional(),
+});
+
+export const rescheduleAppointmentSchema = z.object({
+  date: z.string(),
 });

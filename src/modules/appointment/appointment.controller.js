@@ -5,6 +5,8 @@ import {
   searchDoctorsSchema,
   bookOnlineAppointmentSchema,
   bookReceptionAppointmentSchema,
+  cancelAppointmentSchema,
+  rescheduleAppointmentSchema,
 } from "./appointment.validation.js";
 
 export const searchDoctors = asyncHandler(async (req, res) => {
@@ -28,4 +30,16 @@ export const bookReception = asyncHandler(async (req, res) => {
 export const getMyAppointments = asyncHandler(async (req, res) => {
   const appointments = await appointmentService.getMyAppointments(req.user.id);
   res.status(200).json(new ApiResponse(true, "Appointments fetched", { appointments }));
+});
+
+export const cancelAppointment = asyncHandler(async (req, res) => {
+  const { reason } = cancelAppointmentSchema.parse(req.body);
+  const appointment = await appointmentService.cancelAppointment(req.user, req.params.appointmentId, reason);
+  res.status(200).json(new ApiResponse(true, "Appointment cancelled", { appointment }));
+});
+
+export const rescheduleAppointment = asyncHandler(async (req, res) => {
+  const { date } = rescheduleAppointmentSchema.parse(req.body);
+  const appointment = await appointmentService.rescheduleAppointment(req.user, req.params.appointmentId, date);
+  res.status(200).json(new ApiResponse(true, "Appointment rescheduled", { appointment }));
 });

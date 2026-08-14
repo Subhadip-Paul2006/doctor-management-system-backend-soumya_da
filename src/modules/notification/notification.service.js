@@ -1,4 +1,5 @@
 import ApiError from "../../utils/apiError.js";
+import { emitNewNotification } from "../../sockets/notification.socket.js";
 import {
   createNotification,
   findMyNotifications,
@@ -16,7 +17,9 @@ import {
 export const notifyUser = async ({ userId, type, title, message, meta }) => {
   if (!userId) return null;
   try {
-    return await createNotification({ userId, type, title, message, meta });
+    const notification = await createNotification({ userId, type, title, message, meta });
+    emitNewNotification(userId, notification);
+    return notification;
   } catch (err) {
     console.error("notifyUser failed:", err.message);
     return null;

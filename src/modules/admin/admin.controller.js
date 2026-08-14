@@ -9,6 +9,7 @@ import {
 
 import { updateSettingsSchema } from "./admin.validation.js";
 import { createAdminSchema, createClinicSchema } from "./admin.validation.js";
+import { createDiagnosticCenterSchema, setFeaturedDoctorSchema } from "./admin.validation.js";
 
 export const listClinics = asyncHandler(async (req, res) => {
   const query = listClinicsQuerySchema.parse(req.query);
@@ -77,4 +78,47 @@ export const createClinic = asyncHandler(async (req, res) => {
   const data = createClinicSchema.parse(req.body);
   const result = await adminService.createClinic(data);
   res.status(201).json(new ApiResponse(true, "Clinic account created successfully", result));
+});
+
+
+
+export const createDiagnosticCenter = asyncHandler(async (req, res) => {
+  const data = createDiagnosticCenterSchema.parse(req.body);
+  const result = await adminService.createDiagnosticCenter(data);
+  res.status(201).json(new ApiResponse(true, "Diagnostic center created successfully", result));
+});
+
+export const listDiagnosticCenters = asyncHandler(async (req, res) => {
+  const { isApproved, page = 1, limit = 20 } = req.query;
+  const result = await adminService.listDiagnosticCenters({
+    isApproved: isApproved === undefined ? undefined : isApproved === "true",
+    page: Number(page),
+    limit: Number(limit),
+  });
+  res.status(200).json(new ApiResponse(true, "Diagnostic centers fetched", { centers: result }));
+});
+
+export const approveDiagnosticCenter = asyncHandler(async (req, res) => {
+  const center = await adminService.approveDiagnosticCenter(req.params.centerId);
+  res.status(200).json(new ApiResponse(true, "Diagnostic center approved", { center }));
+});
+
+export const revokeDiagnosticCenter = asyncHandler(async (req, res) => {
+  const center = await adminService.revokeDiagnosticCenterApproval(req.params.centerId);
+  res.status(200).json(new ApiResponse(true, "Diagnostic center approval revoked", { center }));
+});
+
+
+
+export const setFeaturedDoctor = asyncHandler(async (req, res) => {
+  const { isFeatured, featuredOrder } = setFeaturedDoctorSchema.parse(req.body);
+  const doctor = await adminService.setDoctorFeaturedStatus(req.params.doctorId, isFeatured, featuredOrder);
+  res
+    .status(200)
+    .json(new ApiResponse(true, `Doctor ${isFeatured ? "featured" : "unfeatured"} successfully`, { doctor }));
+});
+
+export const listFeaturedDoctors = asyncHandler(async (req, res) => {
+  const doctors = await adminService.listFeaturedDoctors();
+  res.status(200).json(new ApiResponse(true, "Featured doctors fetched", { doctors }));
 });
