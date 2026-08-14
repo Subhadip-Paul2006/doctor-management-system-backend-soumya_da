@@ -1,16 +1,20 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { loginSchema } from "@doctor/types";
+import { applyApiError } from "@doctor/api-client";
 import { Alert, Button, Checkbox, Input } from "@doctor/ui";
+import { useAuth, roleHomePath } from "./AuthProvider";
 
 /**
- * Phase 08 unified staff login (Doctor / Receptionist / Clinic / Admin /
- * Super Admin) — UI + Zod validation. Real submission isolated in
- * `submitLogin`, where @doctor/api-client POST /api/v1/auth/login wiring lands
- * in Phase 09. Role-based redirect happens server/Phase 09 after auth/me.
+ * Unified staff login (Phase 09 — wired to POST /api/v1/auth/login via
+ * authService). After login, redirects by role (Doctor / Receptionist / Clinic /
+ * Admin / Super Admin) using roleHomePath(user.role). Errors mapped by applyApiError.
  */
 export function StaffLoginForm() {
+  const router = useRouter();
+  const { login } = useAuth();
   const [form, setForm] = useState({ email: "", password: "", remember: true });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -21,12 +25,6 @@ export function StaffLoginForm() {
     setForm((f) => ({ ...f, [key]: value }));
     setErrors((prev) => ({ ...prev, [key]: undefined }));
   };
-
-  async function submitLogin(payload) {
-    // Isolated submission point — Phase 09: httpClient.post("/auth/login", payload).
-    await new Promise((r) => setTimeout(r, 400));
-    throw Object.assign(new Error("Authentication service is not connected yet."), { code: "UNAVAILABLE" });
-  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -44,11 +42,11 @@ export function StaffLoginForm() {
     setErrors({});
     setSubmitting(true);
     try {
-      await submitLogin(parsed.data);
+      const user = await login(parsed.data); // POST /auth/login → stores token + returns user
+      router.push(roleHomePath(user && user.role)); // role-based dashboard
     } catch (err) {
-      setServerError(err?.message || "Could not sign you in. Please try again.");
-    } finally {
-      setSubmitting(false);
+      applyApiError(err, setErrors, setServerError);
+      setSubmitting(false); // stay on the form; on success we navigate away instead
     }
   }
 

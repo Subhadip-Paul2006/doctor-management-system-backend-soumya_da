@@ -52,7 +52,9 @@ export const ROLE_NAV = {
     home: "/super-admin/dashboard",
     items: [
       { href: "/super-admin/dashboard", label: "Dashboard" },
-      { href: "/super-admin/admins", label: "Admins" },
+      { href: "/super-admin/clinics", label: "Clinics" },
+      { href: "/super-admin/doctors", label: "Doctors" },
+      { href: "/super-admin/admins", label: "Users & Admins" },
       { href: "/super-admin/platform-settings", label: "Platform Settings" },
     ],
   },

@@ -3,12 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { resetPasswordSchema } from "@doctor/types";
+import { authService, applyApiError } from "@doctor/api-client";
 import { Alert, Button, Input } from "@doctor/ui";
 
 /**
- * Phase 08 reset-password — UI + Zod validation. Real submission isolated in
- * `resetPassword`, where @doctor/api-client POST /api/v1/auth/reset-password
- * wiring lands in Phase 09.
+ * Reset-password (Phase 09 — wired to POST /api/v1/auth/reset-password via
+ * authService). The form collects confirmPassword for client-side confirmation,
+ * but the service strips it and sends only { email, otp, newPassword }.
  */
 export function ResetPasswordForm({ initialEmail = "" }) {
   const [form, setForm] = useState({
@@ -28,12 +29,6 @@ export function ResetPasswordForm({ initialEmail = "" }) {
     setErrors((prev) => ({ ...prev, [key]: undefined }));
   };
 
-  async function resetPassword(payload) {
-    // Isolated submission point — Phase 09: httpClient.post("/auth/reset-password", payload).
-    await new Promise((r) => setTimeout(r, 400));
-    throw Object.assign(new Error("Password-reset service is not connected yet."), { code: "UNAVAILABLE" });
-  }
-
   async function handleSubmit(e) {
     e.preventDefault();
     setServerError(null);
@@ -50,10 +45,11 @@ export function ResetPasswordForm({ initialEmail = "" }) {
     setErrors({});
     setSubmitting(true);
     try {
-      await resetPassword(parsed.data);
+      // Service sends only { email, otp, newPassword } — confirmPassword is client-only.
+      await authService.resetPassword(parsed.data);
       setDone(true);
     } catch (err) {
-      setServerError(err?.message || "Could not reset your password. Please try again.");
+      applyApiError(err, setErrors, setServerError);
     } finally {
       setSubmitting(false);
     }

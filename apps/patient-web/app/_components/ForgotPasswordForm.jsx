@@ -3,13 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { forgotPasswordSchema } from "@doctor/types";
+import { authService, applyApiError } from "@doctor/api-client";
 import { Alert, Button, Input } from "@doctor/ui";
 
 /**
- * Phase 08 forgot-password — UI + Zod validation. Real submission isolated in
- * `requestOtp`, where @doctor/api-client POST /api/v1/auth/forgot-password
- * wiring lands in Phase 09. Success is intentionally non-revealing per the
- * backend ("OTP sent if the email exists").
+ * Forgot-password (Phase 09 — wired to POST /api/v1/auth/forgot-password via
+ * authService). Success is intentionally non-revealing per the backend
+ * ("a reset code has been sent if the email exists").
  */
 export function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
@@ -17,12 +17,6 @@ export function ForgotPasswordForm() {
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
   const [serverError, setServerError] = useState(null);
-
-  async function requestOtp(payload) {
-    // Isolated submission point — Phase 09: httpClient.post("/auth/forgot-password", payload).
-    await new Promise((r) => setTimeout(r, 400));
-    throw Object.assign(new Error("Password-reset service is not connected yet."), { code: "UNAVAILABLE" });
-  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -35,10 +29,10 @@ export function ForgotPasswordForm() {
     setErrors({});
     setSubmitting(true);
     try {
-      await requestOtp(parsed.data);
+      await authService.forgotPassword(parsed.data); // POST /auth/forgot-password
       setSent(true);
     } catch (err) {
-      setServerError(err?.message || "Could not send the reset code. Please try again.");
+      applyApiError(err, setErrors, setServerError);
     } finally {
       setSubmitting(false);
     }

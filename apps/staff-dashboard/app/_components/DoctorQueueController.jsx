@@ -19,10 +19,19 @@ const QUEUE_STATUS_META = {
 };
 
 /**
- * Phase 06: queue control works against local in-memory state seeded from
- * `_data/doctor.js`. Phase 09 wires the confirmed endpoints
- * (POST /api/v1/queue/next, PUT /api/v1/appointments/:id/status,
- * PUT /api/v1/queue/status); Phase 10 adds the socket broadcasts.
+ * Doctor queue control — works against local in-memory state seeded from
+ * `_data/doctor.js`.
+ *
+ * PHASE 09 STATUS: BLOCKED — the DOCTOR role cannot drive these actions with the
+ * current backend:
+ *   • /api/v1/queue/* (next/previous/skip/pause/resume/…) is guarded by
+ *     roleMiddleware("RECEPTIONIST","CLINIC","SUPER_ADMIN","ADMIN") — DOCTOR is
+ *     FORBIDDEN (403), verified in src/modules/queue/queue.routes.js.
+ *   • There is NO `PUT /api/v1/appointments/:id/status` endpoint for
+ *     complete/absent transitions.
+ * Whether a doctor should control their own queue (and via which endpoint) is
+ * TO BE CONFIRMED WITH BACKEND TEAM. Left on local state — no fake wiring.
+ * (Realtime socket broadcasts are Phase 10, out of scope.)
  */
 export function DoctorQueueController({ initial }) {
   const [queueStatus, setQueueStatus] = useState(initial.status);
@@ -43,6 +52,8 @@ export function DoctorQueueController({ initial }) {
   const queueOpen = queueStatus === "OPEN";
 
   function simulate(action, fn, message) {
+    // Local-only state transition — see header: no DOCTOR-accessible queue/appointment
+    // endpoint exists, so these actions are not persisted (BLOCKED, no fake wiring).
     setBusy(action);
     setTimeout(() => {
       fn();

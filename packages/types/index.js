@@ -109,4 +109,87 @@ export const doctorScheduleSchema = z.object({
   weekly: z.array(scheduleDaySchema).length(7, "All 7 days are required"),
 });
 
+// ---------------------------------------------------------------------------
+// Phase 08/09 — Authentication forms (apps/patient-web + apps/staff-dashboard).
+// Mirror the backend auth validators (src/modules/auth/auth.validation.js):
+//   login    { email, password:min1 }
+//   register { name:min2, email, password:min6, phone?, dob?:datetime }
+//   forgot   { email }
+//   reset    { email, otp:len6, newPassword:min6 }
+// These validate UI input only; @doctor/api-client maps them to the backend
+// contract (dob "YYYY-MM-DD" -> ISO datetime; empty phone/dob omitted;
+// confirmPassword is client-only and stripped before the request is sent).
+// ---------------------------------------------------------------------------
+
+export const loginSchema = z.object({
+  email: z.string().trim().min(1, "Email is required").email("Enter a valid email address"),
+  password: z.string().min(1, "Password is required"),
+});
+
+export const patientRegisterSchema = z.object({
+  name: z.string().trim().min(2, "Please enter your full name"),
+  email: z.string().trim().min(1, "Email is required").email("Enter a valid email address"),
+  // The visible hint says "At least 8 characters"; the backend enforces a
+  // 6-char minimum, so this is a stricter (safe) subset for new-account creation.
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  phone: z
+    .string()
+    .trim()
+    .regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit Indian mobile number")
+    .optional()
+    .or(z.literal("")),
+  dob: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a valid date")
+    .optional()
+    .or(z.literal("")),
+});
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().trim().min(1, "Email is required").email("Enter a valid email address"),
+});
+
+export const resetPasswordSchema = z
+  .object({
+    email: z.string().trim().min(1, "Email is required").email("Enter a valid email address"),
+    otp: z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit code"),
+    newPassword: z.string().min(8, "Password must be at least 8 characters"),
+    confirmPassword: z.string().min(1, "Please confirm your password"),
+  })
+  .refine((val) => val.newPassword === val.confirmPassword, {
+    path: ["confirmPassword"],
+    message: "Passwords do not match",
+  });
+
+// ---------------------------------------------------------------------------
+// Phase 07/09 — Receptionist walk-in registration (apps/staff-dashboard).
+// Validates the walk-in form's UI shape. @doctor/api-client maps this onto the
+// backend guest-patient + reception-booking contract
+// (src/modules/patient/patient.validation.js createGuestPatientSchema —
+// gender is upper-cased to MALE|FEMALE|OTHER — and
+// src/modules/appointment/appointment.validation.js bookReceptionAppointmentSchema,
+// where clinicId + date come from the receptionist front-desk context).
+// NOTE: isEmergency + address have no field on the reception-booking endpoint
+// (emergency is a separate POST /queue/.../emergency) — TO BE CONFIRMED WITH
+// BACKEND TEAM; they are collected in the UI but not sent by the service.
+// ---------------------------------------------------------------------------
+
+export const walkInRegistrationSchema = z.object({
+  doctorId: z.string().min(1, "Select a doctor"),
+  name: z.string().trim().min(2, "Please enter the patient's full name"),
+  phone: z
+    .string()
+    .trim()
+    .regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit Indian mobile number"),
+  age: z
+    .coerce.number({ invalid_type_error: "Age is required" })
+    .int("Age must be a whole number")
+    .min(1, "Enter a valid age")
+    .max(120, "Please enter a valid age"),
+  gender: z.enum(["male", "female", "other"], { message: "Please select a gender" }),
+  address: z.string().trim().optional().or(z.literal("")),
+  bookingSource: z.enum(["WALK_IN", "PHONE", "RECEPTION"], { message: "Select a booking source" }),
+  isEmergency: z.boolean().optional().default(false),
+});
+
 export { z };

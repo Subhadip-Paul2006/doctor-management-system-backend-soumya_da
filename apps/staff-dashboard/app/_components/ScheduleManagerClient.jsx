@@ -6,9 +6,16 @@ import { Alert, Badge, Button, Card, CardBody, CardHeader, Input, Select, Toast 
 import { QUEUE_MODES, DAY_LABELS } from "../_data/doctor";
 
 /**
- * Phase 06: schedule settings held in local state seeded from
- * `_data/doctor.js`. Phase 09 persists via
- * GET/PUT /api/v1/doctors/schedule. Validated with doctorScheduleSchema.
+ * Doctor schedule settings — held in local state seeded from `_data/doctor.js`.
+ *
+ * PHASE 09 STATUS: BLOCKED — no matching endpoint. There is NO
+ * `GET/PUT /api/v1/doctors/schedule` in the backend (`src/modules/doctor/*`).
+ * The only related write paths are partial and do NOT cover weekly working hours:
+ *   • PATCH /api/v1/doctors/:doctorId/clinics/:clinicId/consultation-time (avg minutes only)
+ *   • PATCH /api/v1/clinic/doctors/:doctorId (queueMode — CLINIC role only, not DOCTOR)
+ * A full schedule/weekly-hours persistence contract is TO BE CONFIRMED WITH
+ * BACKEND TEAM, so this form intentionally stays on local state (no fake wiring).
+ * Validated with doctorScheduleSchema.
  */
 export function ScheduleManagerClient({ initial }) {
   const [queueMode, setQueueMode] = useState(initial.queueMode);
@@ -48,7 +55,8 @@ export function ScheduleManagerClient({ initial }) {
     }
     setErrors({});
     setSaving(true);
-    // Simulate PUT /api/v1/doctors/schedule round-trip.
+    // BLOCKED: no doctor-accessible schedule-persistence endpoint exists (see header).
+    // Kept as local-only save until the backend schedule contract is confirmed.
     await new Promise((r) => setTimeout(r, 600));
     setSaving(false);
     setSaved(true);
@@ -138,7 +146,7 @@ export function ScheduleManagerClient({ initial }) {
       </Card>
 
       {saved ? (
-        <Alert variant="success" title="Saved">Your schedule preferences were saved locally. They will persist to the backend once API wiring lands in Phase 09.</Alert>
+        <Alert variant="success" title="Saved locally">Your schedule preferences were saved on this device. Persisting them to the backend is pending a schedule endpoint (to be confirmed with the backend team).</Alert>
       ) : null}
 
       <div className="flex justify-end">

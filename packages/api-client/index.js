@@ -1,38 +1,34 @@
-// @doctor/api-client — frontend API boundary (Phase 01 foundation).
-// Generic fetch-based HTTP client. Endpoint-specific services (authService,
-// doctorService, ...) are added in Phase 09 per docs/BACKEND_FRONTEND_CONTRACT.md.
-// Socket client intentionally NOT implemented here (Phase 10).
+// @doctor/api-client — frontend API boundary.
+//
+// Phase 01 shipped a generic fetch wrapper (`httpClient`/`request`); Phase 09
+// adds Bearer auth, single-flight 401→refresh, a normalized `ApiError`, and the
+// modular API services described in docs/FRONTEND_ARCHITECTURE.md §3.2.
+// Socket/realtime code is intentionally NOT here (that is Phase 10).
+//
+// The package `exports` map is root-only, so every consumer imports from
+// "@doctor/api-client" — everything is re-exported through this file.
 
-const DEFAULT_BASE_URL =
-  (typeof process !== "undefined" && process.env && process.env.NEXT_PUBLIC_API_URL) ||
-  "http://localhost:8000/api/v1";
+// --- HTTP core (back-compat surface preserved: `request` + `httpClient`) ---
+export { request, httpClient, DEFAULT_BASE_URL } from "./src/http-client.js";
+export { ApiError } from "./src/api-error.js";
 
-async function request(path, { method = "GET", body, headers = {}, ...rest } = {}) {
-  const res = await fetch(`${DEFAULT_BASE_URL}${path}`, {
-    method,
-    headers: {
-      "Content-Type": "application/json",
-      ...headers,
-    },
-    body: body != null ? JSON.stringify(body) : undefined,
-    credentials: "include",
-    ...rest,
-  });
-  const data = await res.json().catch(() => null);
-  if (!res.ok) {
-    const error = new Error((data && data.message) || `Request failed: ${res.status}`);
-    error.status = res.status;
-    error.data = data;
-    throw error;
-  }
-  return data;
-}
+// --- In-memory access-token store (access token never touches localStorage) ---
+export {
+  getAccessToken,
+  setAccessToken,
+  clearAccessToken,
+  subscribeAccessToken,
+} from "./src/token-store.js";
 
-export const httpClient = {
-  get: (path, options) => request(path, { ...options, method: "GET" }),
-  post: (path, body, options) => request(path, { ...options, method: "POST", body }),
-  put: (path, body, options) => request(path, { ...options, method: "PUT", body }),
-  delete: (path, options) => request(path, { ...options, method: "DELETE" }),
-};
+// --- Error → form-state mapping helper ---
+export { applyApiError, extractFieldErrors } from "./src/apply-api-error.js";
 
-export { request };
+// --- Modular API services ---
+export { authService } from "./src/services/auth.service.js";
+export { patientService } from "./src/services/patient.service.js";
+export { appointmentService } from "./src/services/appointment.service.js";
+export { reviewService } from "./src/services/review.service.js";
+export { doctorService } from "./src/services/doctor.service.js";
+export { notificationService } from "./src/services/notification.service.js";
+export { queueService } from "./src/services/queue.service.js";
+export { clinicService } from "./src/services/clinic.service.js";

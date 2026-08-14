@@ -5,9 +5,15 @@ import { Badge, Card, CardBody, CardHeader, Checkbox } from "@doctor/ui";
 import { formatTokenNumber } from "@doctor/utils";
 
 /**
- * Phase 05: static snapshot of the queue from isolated mock data.
- * Phase 10 will replace polling/manual refresh with Socket.io
- * `queueUpdate` / `tokenCalled` events on room `queue:<doctorId>:<clinicId>`.
+ * Patient live-queue view — static snapshot from isolated mock data.
+ *
+ * PHASE 09 STATUS: BLOCKED — no patient-accessible queue-read endpoint. The
+ * backend `/api/v1/queue/*` routes are guarded by
+ * roleMiddleware("RECEPTIONIST","CLINIC","SUPER_ADMIN","ADMIN") — the PATIENT
+ * role is FORBIDDEN (403), so a patient cannot fetch their own live queue
+ * position. A patient queue-status contract is TO BE CONFIRMED WITH BACKEND TEAM.
+ * Continuous live updates (Socket.io `queueUpdate` / `tokenCalled` on room
+ * `queue:<doctorId>:<clinicId>`) are Phase 10 and out of scope here.
  */
 export function LiveQueueClient({ snapshot }) {
   const [data] = useState(snapshot);
@@ -62,7 +68,7 @@ export function LiveQueueClient({ snapshot }) {
       </Card>
 
       <p className="text-center text-xs text-navy-500">
-        Live updates arrive automatically once realtime (Socket.io) is connected in a later phase.
+        This is a sample view. Live queue tracking will be enabled once a patient queue-status endpoint and realtime updates are available.
       </p>
     </div>
   );

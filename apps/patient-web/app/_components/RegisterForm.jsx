@@ -3,17 +3,20 @@
 import { useState } from "react";
 import Link from "next/link";
 import { patientRegisterSchema } from "@doctor/types";
+import { authService, applyApiError } from "@doctor/api-client";
 import { Alert, Button, Input } from "@doctor/ui";
 
 /**
- * Phase 08 patient registration — UI + Zod validation. Real submission is
- * isolated in `submitRegister`, where @doctor/api-client POST
- * /api/v1/auth/register wiring lands in Phase 09 (backend not running here).
+ * Patient registration (Phase 09 — wired to POST /api/v1/auth/register via
+ * authService). Registration returns the created user only (NO token), so on
+ * success we surface a confirmation and route the patient to log in. The service
+ * transforms dob "YYYY-MM-DD" → ISO datetime and omits empty phone/dob.
  */
 export function RegisterForm() {
   const [form, setForm] = useState({ name: "", email: "", password: "", phone: "", dob: "" });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const [done, setDone] = useState(false);
   const [serverError, setServerError] = useState(null);
 
   const set = (key) => (e) => {
@@ -21,12 +24,6 @@ export function RegisterForm() {
     setForm((f) => ({ ...f, [key]: value }));
     setErrors((prev) => ({ ...prev, [key]: undefined }));
   };
-
-  async function submitRegister(payload) {
-    // Isolated submission point — Phase 09: httpClient.post("/auth/register", payload).
-    await new Promise((r) => setTimeout(r, 400));
-    throw Object.assign(new Error("Registration service is not connected yet."), { code: "UNAVAILABLE" });
-  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -44,12 +41,24 @@ export function RegisterForm() {
     setErrors({});
     setSubmitting(true);
     try {
-      await submitRegister(parsed.data);
+      await authService.register(parsed.data); // POST /auth/register → { user } only
+      setDone(true);
     } catch (err) {
-      setServerError(err?.message || "Could not create your account. Please try again.");
+      applyApiError(err, setErrors, setServerError);
     } finally {
       setSubmitting(false);
     }
+  }
+
+  if (done) {
+    return (
+      <div className="space-y-4 text-center">
+        <Alert variant="success" title="Account created">
+          Your patient account is ready. Log in to book appointments and track your queue.
+        </Alert>
+        <Link href="/login"><Button size="sm" className="w-full">Go to log in</Button></Link>
+      </div>
+    );
   }
 
   return (

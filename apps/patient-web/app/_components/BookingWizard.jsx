@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { appointmentBookingSchema } from "@doctor/types";
+import { appointmentService, applyApiError } from "@doctor/api-client";
 import {
   Alert,
   Avatar,
@@ -68,6 +69,7 @@ export function BookingWizard({ doctor, dates, timeSlots, nextToken, existingPat
   const [submitting, setSubmitting] = useState(false);
   const [confirmed, setConfirmed] = useState(null);
   const [errors, setErrors] = useState({});
+  const [serverError, setServerError] = useState(null);
 
   const [form, setForm] = useState({
     date: "",
@@ -150,14 +152,29 @@ export function BookingWizard({ doctor, dates, timeSlots, nextToken, existingPat
       return;
     }
 
+    setServerError(null);
     setSubmitting(true);
-    // PHASE 05: no live booking endpoint call yet (auth arrives in Phase 08,
-    // wiring in Phase 09). Simulate the confirmed POST /api/v1/appointments
-    // round-trip shape: backend assigns the next sequential token.
-    await new Promise((r) => setTimeout(r, 700));
-    const token = isLiveQueue ? nextToken.token : Math.floor(Math.random() * 20) + 5;
-    setConfirmed({ ...parsed.data, token });
-    setSubmitting(false);
+    try {
+      // POST /api/v1/appointments/book/online (PATIENT). The endpoint accepts
+      // ONLY { doctorId, clinicId, date } and books for the authenticated
+      // patient; the step-2 timeSlot and step-3 patient details (self/family,
+      // name/phone/age/gender) have NO field on this contract and are NOT sent.
+      // TO BE CONFIRMED WITH BACKEND TEAM: family-member booking + time-slot
+      // selection need a future contract (bookReception carries patient details
+      // but is RECEPTIONIST/CLINIC-only). doctorId/clinicId must be real UUIDs.
+      const result = await appointmentService.bookOnline({
+        doctorId: doctor.id,
+        clinicId: doctor.clinic.id,
+        date: form.date,
+      });
+      const appt = result && result.appointment ? result.appointment : result;
+      const token = appt && appt.token != null ? appt.token : isLiveQueue ? nextToken.token : null;
+      setConfirmed({ ...parsed.data, token });
+    } catch (err) {
+      applyApiError(err, setErrors, setServerError);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   // ----- Confirmation state (replaces the wizard) -----
@@ -393,6 +410,11 @@ export function BookingWizard({ doctor, dates, timeSlots, nextToken, existingPat
                 may contact you on <strong>{form.phone}</strong> about this visit.
               </Alert>
             </div>
+          ) : null}
+
+          {/* Submission error (e.g. booking endpoint rejected the request) */}
+          {serverError ? (
+            <Alert variant="danger" role="alert" className="mt-4">{serverError}</Alert>
           ) : null}
 
           {/* Nav */}

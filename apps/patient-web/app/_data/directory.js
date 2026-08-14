@@ -6,6 +6,14 @@
 // docs/BACKEND_FRONTEND_CONTRACT.md §2.2/§2.7/§2.9 "TO BE CONFIRMED").
 // Phase 04 builds the public UX against this isolated module.
 //
+// PHASE 09 STATUS: BLOCKED — re-verified against src/. The only doctor/clinic
+// discovery endpoints are `GET /api/v1/doctors/search?name=` and
+// `GET /api/v1/doctors/clinics/search?name=`, and BOTH require authMiddleware
+// (no anonymous access) and are name-search only — there is no unauthenticated
+// list or public profile endpoint. These public pages are unauthenticated, so
+// they cannot call them. A public discovery contract is TO BE CONFIRMED WITH
+// BACKEND TEAM; this module stays as the data source (no fake wiring).
+//
 // SHAPES mirror the Prisma `Doctor` / `Clinic` models from the contract so a
 // real public API can replace this module with no UI changes.
 //

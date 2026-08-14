@@ -1,15 +1,21 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { loginSchema } from "@doctor/types";
+import { applyApiError } from "@doctor/api-client";
 import { Alert, Button, Checkbox, Input } from "@doctor/ui";
+import { useAuth, roleHomePath } from "./AuthProvider";
 
 /**
- * Phase 08 patient login — UI + Zod validation. Real submission is isolated in
- * `submitLogin`, which is where @doctor/api-client POST /api/v1/auth/login
- * wiring lands in Phase 09 (backend auth currently not running in this env).
+ * Patient login (Phase 09 — wired to POST /api/v1/auth/login via authService).
+ * Zod-validates input, calls useAuth().login (which stores the in-memory access
+ * token), then redirects to the patient dashboard. Field-level + banner errors
+ * are mapped from the backend envelope by applyApiError.
  */
 export function LoginForm() {
+  const router = useRouter();
+  const { login } = useAuth();
   const [form, setForm] = useState({ email: "", password: "", remember: true });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -20,14 +26,6 @@ export function LoginForm() {
     setForm((f) => ({ ...f, [key]: value }));
     setErrors((prev) => ({ ...prev, [key]: undefined }));
   };
-
-  async function submitLogin(payload) {
-    // Isolated submission point — Phase 09: httpClient.post("/auth/login", payload).
-    // Intentionally does NOT call a backend that isn't running; surfaces a neutral
-    // "service unavailable" style error so the error path is exercised and testable.
-    await new Promise((r) => setTimeout(r, 400));
-    throw Object.assign(new Error("Authentication service is not connected yet."), { code: "UNAVAILABLE" });
-  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -45,11 +43,11 @@ export function LoginForm() {
     setErrors({});
     setSubmitting(true);
     try {
-      await submitLogin(parsed.data);
+      await login(parsed.data); // POST /auth/login → stores access token + sets user
+      router.push(roleHomePath());
     } catch (err) {
-      setServerError(err?.message || "Could not sign you in. Please try again.");
-    } finally {
-      setSubmitting(false);
+      applyApiError(err, setErrors, setServerError);
+      setSubmitting(false); // stay on the form; on success we navigate away instead
     }
   }
 
@@ -90,7 +88,7 @@ export function LoginForm() {
       <Button type="submit" className="w-full" loading={submitting}>
         Log in
       </Button>
-      <Button type="button" variant="outline" className="w-full" disabled title="Google sign-in activates in Phase 09">
+      <Button type="button" variant="outline" className="w-full" disabled title="Google sign-in (OAuth redirect flow) is not enabled in this phase">
         Continue with Google
       </Button>
     </form>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { reviewSchema } from "@doctor/types";
+import { reviewService, applyApiError } from "@doctor/api-client";
 import { Alert, Avatar, Button, Card, CardBody, EmptyState, Modal, Textarea } from "@doctor/ui";
 
 function StarRating({ value, onChange, error }) {
@@ -39,17 +40,20 @@ export function ReviewsClient({ reviews, reviewable }) {
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(null); // appointmentId just reviewed
+  const [serverError, setServerError] = useState(null);
 
   function openModal(appointment) {
     setTarget(appointment);
     setRating(0);
     setComment("");
     setErrors({});
+    setServerError(null);
     setSubmitted(null);
     setOpen(true);
   }
 
   async function submit() {
+    setServerError(null);
     const parsed = reviewSchema.safeParse({
       appointmentId: target.id,
       rating,
@@ -64,11 +68,18 @@ export function ReviewsClient({ reviews, reviewable }) {
       setErrors(fieldErrors);
       return;
     }
+    setErrors({});
     setSubmitting(true);
-    // PHASE 05: simulate POST /api/v1/reviews (auth arrives Phase 08, wiring Phase 09).
-    await new Promise((r) => setTimeout(r, 600));
-    setSubmitting(false);
-    setSubmitted(target.id);
+    try {
+      // POST /api/v1/reviews (PATIENT). Body { appointmentId(uuid), rating(1-5), comment? };
+      // the service omits an empty comment. appointmentId must be a real UUID.
+      await reviewService.create(parsed.data);
+      setSubmitted(target.id);
+    } catch (err) {
+      applyApiError(err, setErrors, setServerError);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   function close() {
@@ -178,6 +189,7 @@ export function ReviewsClient({ reviews, reviewable }) {
           </div>
         ) : target ? (
           <div className="space-y-4">
+            {serverError ? <Alert variant="danger" role="alert">{serverError}</Alert> : null}
             <StarRating value={rating} onChange={(v) => { setRating(v); setErrors((p) => ({ ...p, rating: undefined })); }} error={errors.rating} />
             <Textarea
               label="Your experience (optional)"

@@ -19,10 +19,16 @@ const QUEUE_STATUS_META = {
 };
 
 /**
- * Phase 07: check-in desk held in local per-doctor state seeded from
- * `_data/receptionist.js`. Phase 09 persists CHECKED_IN via
- * PUT /api/v1/appointments/:id/status (confirmed contract); Phase 10 reflects
- * live queueUpdate/tokenCalled events.
+ * Receptionist check-in desk — held in local per-doctor state seeded from
+ * `_data/receptionist.js`.
+ *
+ * PHASE 09 STATUS: BLOCKED — no matching endpoint. There is NO
+ * `PUT /api/v1/appointments/:id/status` (or equivalent per-appointment check-in
+ * endpoint) in the backend, so marking a token CHECKED_IN cannot be persisted.
+ * The confirmed queue endpoints (/api/v1/queue/:doctorId/:clinicId/:date/*)
+ * advance/skip/recall tokens but expose no CHECKED_IN transition. A check-in
+ * contract is TO BE CONFIRMED WITH BACKEND TEAM. Left on local state — no fake
+ * wiring. (Live queueUpdate/tokenCalled events are Phase 10, out of scope.)
  */
 export function QueueDeskClient({ doctors, queuesByDoctor }) {
   const [activeDoctorId, setActiveDoctorId] = useState(doctors[0]?.id ?? null);
@@ -55,7 +61,8 @@ export function QueueDeskClient({ doctors, queuesByDoctor }) {
 
   function markCheckedIn(appointment) {
     setCheckingIn(appointment.id);
-    // Simulate PUT /api/v1/appointments/:id/status { status: "CHECKED_IN" }.
+    // BLOCKED: no appointment check-in endpoint exists (see header) — local-only,
+    // not persisted. To be confirmed with the backend team.
     setTimeout(() => {
       setTokensByDoctor((prev) => ({
         ...prev,

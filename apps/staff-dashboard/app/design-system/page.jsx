@@ -30,7 +30,7 @@ export default function DesignSystemPage() {
       <div className="mx-auto max-w-4xl space-y-10">
         <header className="space-y-1">
           <p className="text-xs font-semibold uppercase tracking-wide text-medical-600">Staff Dashboard</p>
-          <h1 className="text-2xl font-bold text-navy-900">Phase 02 — Design System Showcase</h1>
+          <h1 className="text-2xl font-bold text-navy-900">Design System Showcase</h1>
           <p className="text-sm text-navy-500">All @doctor/ui primitives rendered with design tokens.</p>
         </header>
 
